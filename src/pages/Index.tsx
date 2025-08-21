@@ -1,353 +1,283 @@
-
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, DollarSign, TrendingUp, Calendar, Search, Plus, Filter } from "lucide-react";
-import { ContactForm } from "@/components/ContactForm";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Deal, DealStage } from "@/types/deal";
 import { DealForm } from "@/components/DealForm";
-
-interface Contact {
-  id: number;
-  name: string;
-  email: string;
-  company: string;
-  phone: string;
-  status: "active" | "inactive" | "prospect";
-}
-
-interface Deal {
-  id: number;
-  title: string;
-  value: number;
-  stage: "lead" | "qualified" | "proposal" | "negotiation" | "closed-won" | "closed-lost";
-  contact: string;
-  probability: number;
-  closeDate: string;
-}
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
+import { DashboardContent } from "@/components/dashboard/DashboardContent";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [showContactForm, setShowContactForm] = useState(false);
-  const [showDealForm, setShowDealForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const { user, loading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [initialStage, setInitialStage] = useState<DealStage>('Lead');
+  const [activeView, setActiveView] = useState<'kanban' | 'list'>('kanban');
 
-  // Sample data
-  const [contacts, setContacts] = useState<Contact[]>([
-    { id: 1, name: "John Doe", email: "john@company.com", company: "Tech Corp", phone: "+1-555-0123", status: "active" },
-    { id: 2, name: "Jane Smith", email: "jane@startup.io", company: "Startup Inc", phone: "+1-555-0124", status: "prospect" },
-    { id: 3, name: "Bob Johnson", email: "bob@enterprise.com", company: "Enterprise Ltd", phone: "+1-555-0125", status: "active" },
-  ]);
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
 
-  const [deals, setDeals] = useState<Deal[]>([
-    { id: 1, title: "Software License", value: 50000, stage: "proposal", contact: "John Doe", probability: 75, closeDate: "2024-09-15" },
-    { id: 2, title: "Consulting Service", value: 25000, stage: "negotiation", contact: "Jane Smith", probability: 60, closeDate: "2024-09-30" },
-    { id: 3, title: "Hardware Purchase", value: 15000, stage: "qualified", contact: "Bob Johnson", probability: 40, closeDate: "2024-10-15" },
-  ]);
+  useEffect(() => {
+    if (user) {
+      fetchDeals();
+    }
+  }, [user]);
 
-  const filteredContacts = contacts.filter(contact =>
-    contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchDeals = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('deals')
+        .select('*')
+        .order('modified_at', { ascending: false });
 
-  const filteredDeals = deals.filter(deal =>
-    deal.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    deal.contact.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch deals",
+          variant: "destructive",
+        });
+        return;
+      }
 
-  const totalDealsValue = deals.reduce((sum, deal) => sum + deal.value, 0);
-  const wonDeals = deals.filter(deal => deal.stage === "closed-won");
-  const totalRevenue = wonDeals.reduce((sum, deal) => sum + deal.value, 0);
-  const conversionRate = contacts.length > 0 ? Math.round((wonDeals.length / contacts.length) * 100) : 0;
-
-  const addContact = (newContact: Omit<Contact, 'id'>) => {
-    setContacts([...contacts, { ...newContact, id: Date.now() }]);
-    setShowContactForm(false);
-  };
-
-  const addDeal = (newDeal: Omit<Deal, 'id'>) => {
-    setDeals([...deals, { ...newDeal, id: Date.now() }]);
-    setShowDealForm(false);
-  };
-
-  const getStageColor = (stage: Deal['stage']) => {
-    switch (stage) {
-      case "lead": return "bg-gray-100 text-gray-800";
-      case "qualified": return "bg-blue-100 text-blue-800";
-      case "proposal": return "bg-yellow-100 text-yellow-800";
-      case "negotiation": return "bg-orange-100 text-orange-800";
-      case "closed-won": return "bg-green-100 text-green-800";
-      case "closed-lost": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      setDeals((data || []) as unknown as Deal[]);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusColor = (status: Contact['status']) => {
-    switch (status) {
-      case "active": return "bg-green-100 text-green-800";
-      case "inactive": return "bg-gray-100 text-gray-800";
-      case "prospect": return "bg-blue-100 text-blue-800";
-      default: return "bg-gray-100 text-gray-800";
+  const handleUpdateDeal = async (dealId: string, updates: Partial<Deal>) => {
+    try {
+      const { error } = await supabase
+        .from('deals')
+        .update({ ...updates, modified_at: new Date().toISOString() })
+        .eq('id', dealId);
+
+      if (error) throw error;
+
+      setDeals(prev => prev.map(deal => 
+        deal.id === dealId ? { ...deal, ...updates } : deal
+      ));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update deal",
+        variant: "destructive",
+      });
     }
   };
+
+  const handleSaveDeal = async (dealData: Partial<Deal>) => {
+    try {
+      if (isCreating) {
+        const { data, error } = await supabase
+          .from('deals')
+          .insert([{ 
+            ...dealData, 
+            deal_name: dealData.project_name || 'Untitled Deal',
+            created_by: user?.id,
+            modified_by: user?.id 
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setDeals(prev => [data as unknown as Deal, ...prev]);
+      } else if (selectedDeal) {
+        const updateData = {
+          ...dealData,
+          deal_name: dealData.project_name || selectedDeal.project_name || 'Untitled Deal',
+          modified_at: new Date().toISOString(),
+          modified_by: user?.id
+        };
+        
+        console.log("Updating deal with data:", updateData);
+        
+        await handleUpdateDeal(selectedDeal.id, updateData);
+        
+        await fetchDeals();
+      }
+    } catch (error) {
+      console.error("Error in handleSaveDeal:", error);
+      throw error;
+    }
+  };
+
+  const handleDeleteDeals = async (dealIds: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('deals')
+        .delete()
+        .in('id', dealIds);
+
+      if (error) throw error;
+
+      setDeals(prev => prev.filter(deal => !dealIds.includes(deal.id)));
+      
+      toast({
+        title: "Success",
+        description: `Deleted ${dealIds.length} deal(s)`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete deals",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImportDeals = async (importedDeals: (Partial<Deal> & { shouldUpdate?: boolean })[]) => {
+    try {
+      let createdCount = 0;
+      let updatedCount = 0;
+
+      for (const importDeal of importedDeals) {
+        const { shouldUpdate, ...dealData } = importDeal;
+        
+        const existingDeal = deals.find(d => 
+          (dealData.id && d.id === dealData.id) || 
+          (dealData.project_name && d.project_name === dealData.project_name)
+        );
+
+        if (existingDeal) {
+          const { data, error } = await supabase
+            .from('deals')
+            .update({
+              ...dealData,
+              modified_by: user?.id,
+              deal_name: dealData.project_name || existingDeal.deal_name
+            })
+            .eq('id', existingDeal.id)
+            .select()
+            .single();
+
+          if (error) throw error;
+          updatedCount++;
+        } else {
+          const newDealData = {
+            ...dealData,
+            stage: dealData.stage || 'Lead' as const,
+            created_by: user?.id,
+            modified_by: user?.id,
+            deal_name: dealData.project_name || `Imported Deal ${Date.now()}`
+          };
+
+          const { data, error } = await supabase
+            .from('deals')
+            .insert(newDealData)
+            .select()
+            .single();
+
+          if (error) throw error;
+          createdCount++;
+        }
+      }
+
+      await fetchDeals();
+      
+      toast({
+        title: "Import successful",
+        description: `Created ${createdCount} new deals, updated ${updatedCount} existing deals`,
+      });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to import deals. Please check the CSV format.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateDeal = (stage: DealStage) => {
+    setInitialStage(stage);
+    setIsCreating(true);
+    setSelectedDeal(null);
+    setIsFormOpen(true);
+  };
+
+  const handleDealClick = (deal: Deal) => {
+    setSelectedDeal(deal);
+    setIsCreating(false);
+    setIsFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setSelectedDeal(null);
+    setIsCreating(false);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b">
-        <div className="flex h-16 items-center px-4">
-          <h1 className="text-2xl font-bold">CRM Dashboard</h1>
-          <div className="ml-auto flex items-center space-x-4">
-            <div className="flex space-x-2">
-              <Button
-                variant={activeTab === "dashboard" ? "default" : "ghost"}
-                onClick={() => setActiveTab("dashboard")}
-              >
-                Dashboard
-              </Button>
-              <Button
-                variant={activeTab === "contacts" ? "default" : "ghost"}
-                onClick={() => setActiveTab("contacts")}
-              >
-                Contacts
-              </Button>
-              <Button
-                variant={activeTab === "deals" ? "default" : "ghost"}
-                onClick={() => setActiveTab("deals")}
-              >
-                Deals
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        activeView={activeView}
+        onViewChange={setActiveView}
+        onCreateDeal={() => handleCreateDeal('Lead')}
+        onSignOut={handleSignOut}
+      />
 
-      <div className="container mx-auto p-6">
-        {activeTab === "dashboard" && (
-          <div className="space-y-6">
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{contacts.length}</div>
-                  <p className="text-xs text-muted-foreground">+2 from last month</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">${totalDealsValue.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">+12% from last month</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">+8% from last month</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{conversionRate}%</div>
-                  <p className="text-xs text-muted-foreground">+2% from last month</p>
-                </CardContent>
-              </Card>
-            </div>
+      <DashboardStats deals={deals} />
 
-            {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Contacts</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {contacts.slice(0, 3).map((contact) => (
-                      <div key={contact.id} className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{contact.name}</p>
-                          <p className="text-sm text-muted-foreground">{contact.company}</p>
-                        </div>
-                        <Badge className={getStatusColor(contact.status)}>
-                          {contact.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+      <DashboardContent
+        activeView={activeView}
+        deals={deals}
+        onUpdateDeal={handleUpdateDeal}
+        onDealClick={handleDealClick}
+        onCreateDeal={handleCreateDeal}
+        onDeleteDeals={handleDeleteDeals}
+        onImportDeals={handleImportDeals}
+        onRefresh={fetchDeals}
+      />
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Active Deals</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {deals.slice(0, 3).map((deal) => (
-                      <div key={deal.id} className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{deal.title}</p>
-                          <p className="text-sm text-muted-foreground">{deal.contact}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">${deal.value.toLocaleString()}</p>
-                          <Badge className={getStageColor(deal.stage)}>
-                            {deal.stage}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "contacts" && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold">Contacts</h2>
-              <Button onClick={() => setShowContactForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Contact
-              </Button>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search contacts..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-              <Button variant="outline" size="icon">
-                <Filter className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredContacts.map((contact) => (
-                    <TableRow key={contact.id}>
-                      <TableCell className="font-medium">{contact.name}</TableCell>
-                      <TableCell>{contact.company}</TableCell>
-                      <TableCell>{contact.email}</TableCell>
-                      <TableCell>{contact.phone}</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(contact.status)}>
-                          {contact.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === "deals" && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold">Deals</h2>
-              <Button onClick={() => setShowDealForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Deal
-              </Button>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search deals..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-              <Button variant="outline" size="icon">
-                <Filter className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Value</TableHead>
-                    <TableHead>Stage</TableHead>
-                    <TableHead>Probability</TableHead>
-                    <TableHead>Close Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDeals.map((deal) => (
-                    <TableRow key={deal.id}>
-                      <TableCell className="font-medium">{deal.title}</TableCell>
-                      <TableCell>{deal.contact}</TableCell>
-                      <TableCell>${deal.value.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Badge className={getStageColor(deal.stage)}>
-                          {deal.stage}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{deal.probability}%</TableCell>
-                      <TableCell>{deal.closeDate}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
-          </div>
-        )}
-      </div>
-
-      {/* Forms */}
-      {showContactForm && (
-        <ContactForm
-          onClose={() => setShowContactForm(false)}
-          onSubmit={addContact}
-        />
-      )}
-
-      {showDealForm && (
-        <DealForm
-          onClose={() => setShowDealForm(false)}
-          onSubmit={addDeal}
-          contacts={contacts}
-        />
-      )}
+      <DealForm
+        deal={selectedDeal}
+        isOpen={isFormOpen}
+        onClose={handleCloseForm}
+        onSave={handleSaveDeal}
+        onRefresh={fetchDeals}
+        isCreating={isCreating}
+        initialStage={initialStage}
+      />
     </div>
   );
 };
