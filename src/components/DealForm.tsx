@@ -8,6 +8,8 @@ import { Deal, DealStage, getNextStage, getFinalStageOptions, getStageIndex, DEA
 import { useToast } from "@/hooks/use-toast";
 import { validateRequiredFields, getFieldErrors, validateDateLogic, validateRevenueSum } from "./deal-form/validation";
 import { DealStageForm } from "./deal-form/DealStageForm";
+import { DealActionItemsModal } from "./DealActionItemsModal";
+import { MoreHorizontal } from "lucide-react";
 
 interface DealFormProps {
   deal: Deal | null;
@@ -25,6 +27,7 @@ export const DealForm = ({ deal, isOpen, onClose, onSave, isCreating = false, in
   const [showPreviousStages, setShowPreviousStages] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const [actionModalOpen, setActionModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -269,17 +272,27 @@ export const DealForm = ({ deal, isOpen, onClose, onSave, isCreating = false, in
                   {currentStage}
                 </Badge>
                 {!isCreating && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      console.log("Toggle button clicked! Current state:", showPreviousStages);
-                      setShowPreviousStages(!showPreviousStages);
-                      console.log("New state will be:", !showPreviousStages);
-                    }}
-                  >
-                    {showPreviousStages ? 'Hide Previous Stages' : 'Show All Stages'}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        console.log("Toggle button clicked! Current state:", showPreviousStages);
+                        setShowPreviousStages(!showPreviousStages);
+                        console.log("New state will be:", !showPreviousStages);
+                      }}
+                    >
+                      {showPreviousStages ? 'Hide Previous Stages' : 'Show All Stages'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActionModalOpen(true)}
+                      className="p-2"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -335,6 +348,13 @@ export const DealForm = ({ deal, isOpen, onClose, onSave, isCreating = false, in
           </div>
         </form>
       </DialogContent>
+      
+      {/* Action Items Modal */}
+      <DealActionItemsModal
+        open={actionModalOpen}
+        onOpenChange={setActionModalOpen}
+        deal={deal}
+      />
     </Dialog>
   );
 };
