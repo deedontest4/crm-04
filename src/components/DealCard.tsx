@@ -1,11 +1,11 @@
 
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Deal, STAGE_COLORS } from "@/types/deal";
 import { format } from "date-fns";
-import { Trash2, XCircle } from "lucide-react";
+import { Trash2, XCircle, MoreHorizontal, Edit } from "lucide-react";
 
 interface DealCardProps {
   deal: Deal;
@@ -38,13 +38,33 @@ export const DealCard = ({
     }
   };
 
+  const handleActionClick = (e: React.MouseEvent, action: string) => {
+    e.stopPropagation();
+    
+    switch (action) {
+      case 'edit':
+        onClick(e);
+        break;
+      case 'moveToDropped':
+        if (onStageChange) {
+          onStageChange(deal.id, 'Dropped');
+        }
+        break;
+      case 'delete':
+        if (onDelete) {
+          onDelete(deal.id);
+        }
+        break;
+    }
+  };
+
   return (
     <Card
       className={`deal-card cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 ${
         isDragging ? 'opacity-50' : ''
       } ${isSelected ? 'ring-2 ring-primary bg-primary/10 border-primary' : ''} ${
         selectionMode ? 'pl-8' : ''
-      } animate-fade-in border-border/50 hover:bg-gradient-to-br hover:from-card hover:to-primary/5 button-scale min-h-[180px]`}
+      } animate-fade-in border-border/50 hover:bg-gradient-to-br hover:from-card hover:to-primary/5 button-scale min-h-[180px] group`}
       onClick={onClick}
       style={{ boxShadow: 'var(--shadow-sm)' }}
     >
@@ -54,29 +74,40 @@ export const DealCard = ({
             {deal.project_name || 'Untitled Deal'}
           </CardTitle>
           <div className="flex items-center gap-1">
-            {!selectionMode && deal.stage === 'Offered' && onStageChange && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleMoveToDropped}
-                className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1 h-6 w-6 bg-orange-100 hover:bg-orange-200 text-orange-600"
-                title="Move to Dropped"
-              >
-                <XCircle className="w-3 h-3" />
-              </Button>
-            )}
-            {!selectionMode && onDelete && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(deal.id);
-                }}
-                className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1 h-6 w-6 bg-destructive/10 hover:bg-destructive/20 text-destructive"
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
+            {!selectionMode && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1 h-6 w-6 hover:bg-muted"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreHorizontal className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={(e) => handleActionClick(e, 'edit')}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Deal
+                  </DropdownMenuItem>
+                  {deal.stage === 'Offered' && onStageChange && (
+                    <DropdownMenuItem onClick={(e) => handleActionClick(e, 'moveToDropped')}>
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Move to Dropped
+                    </DropdownMenuItem>
+                  )}
+                  {onDelete && (
+                    <DropdownMenuItem 
+                      onClick={(e) => handleActionClick(e, 'delete')}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Deal
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>
