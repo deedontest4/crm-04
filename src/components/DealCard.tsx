@@ -1,11 +1,10 @@
-
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Deal, STAGE_COLORS } from "@/types/deal";
 import { format } from "date-fns";
-import { Trash2, XCircle } from "lucide-react";
+import { Trash2, XCircle, MoreVertical } from "lucide-react";
 
 interface DealCardProps {
   deal: Deal;
@@ -38,6 +37,10 @@ export const DealCard = ({
     }
   };
 
+  const handleActionClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <Card
       className={`deal-card cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 ${
@@ -54,6 +57,44 @@ export const DealCard = ({
             {deal.project_name || 'Untitled Deal'}
           </CardTitle>
           <div className="flex items-center gap-1">
+            {!selectionMode && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleActionClick}
+                    className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1 h-6 w-6 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
+                    title="Actions"
+                  >
+                    <MoreVertical className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onClick()}>
+                    Edit Deal
+                  </DropdownMenuItem>
+                  {deal.stage === 'Offered' && onStageChange && (
+                    <DropdownMenuItem onClick={handleMoveToDropped}>
+                      <XCircle className="w-3 h-3 mr-2" />
+                      Move to Dropped
+                    </DropdownMenuItem>
+                  )}
+                  {onDelete && (
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(deal.id);
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="w-3 h-3 mr-2" />
+                      Delete Deal
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             {!selectionMode && deal.stage === 'Offered' && onStageChange && (
               <Button
                 size="sm"
