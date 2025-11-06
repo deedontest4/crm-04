@@ -287,6 +287,51 @@ export type Database = {
         }
         Relationships: []
       }
+      backups: {
+        Row: {
+          backup_date: string
+          backup_name: string
+          backup_type: string
+          created_at: string | null
+          created_by: string
+          file_size: number | null
+          id: string
+          notes: string | null
+          status: string
+          storage_path: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          backup_date?: string
+          backup_name: string
+          backup_type: string
+          created_at?: string | null
+          created_by: string
+          file_size?: number | null
+          id?: string
+          notes?: string | null
+          status?: string
+          storage_path?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          backup_date?: string
+          backup_name?: string
+          backup_type?: string
+          created_at?: string | null
+          created_by?: string
+          file_size?: number | null
+          id?: string
+          notes?: string | null
+          status?: string
+          storage_path?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       compliance: {
         Row: {
           assigned_to: string | null
@@ -591,6 +636,59 @@ export type Database = {
           vendor?: string
         }
         Relationships: []
+      }
+      maintenance: {
+        Row: {
+          asset_id: string | null
+          asset_name: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          maintenance_type: string
+          notes: string | null
+          performed_by: string | null
+          scheduled_date: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          asset_id?: string | null
+          asset_name: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          maintenance_type: string
+          notes?: string | null
+          performed_by?: string | null
+          scheduled_date: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          asset_id?: string | null
+          asset_name?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          maintenance_type?: string
+          notes?: string | null
+          performed_by?: string | null
+          scheduled_date?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       monitoring: {
         Row: {
@@ -931,6 +1029,54 @@ export type Database = {
         }
         Relationships: []
       }
+      system_updates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          device_name: string
+          id: string
+          installed_on: string | null
+          last_checked: string | null
+          os_version: string
+          patch_id: string
+          remarks: string | null
+          status: string
+          update_type: string
+          update_version: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          device_name: string
+          id?: string
+          installed_on?: string | null
+          last_checked?: string | null
+          os_version: string
+          patch_id: string
+          remarks?: string | null
+          status?: string
+          update_type: string
+          update_version: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          device_name?: string
+          id?: string
+          installed_on?: string | null
+          last_checked?: string | null
+          os_version?: string
+          patch_id?: string
+          remarks?: string | null
+          status?: string
+          update_type?: string
+          update_version?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       tickets: {
         Row: {
           assigned_to: string | null
@@ -1185,6 +1331,7 @@ export type Database = {
         Returns: boolean
       }
       send_goal_reminders: { Args: never; Returns: undefined }
+      send_maintenance_reminders: { Args: never; Returns: undefined }
       test_employee_rating_insert: {
         Args: {
           p_rating: string
