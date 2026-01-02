@@ -132,51 +132,65 @@ export const AccountDetailModal = ({ open, onOpenChange, account, onUpdate, onEd
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4 mt-4">
-              {/* Account Info */}
+              {/* Account Info - 2 Column Grid */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Company Details</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {account.website && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Globe className="h-4 w-4 text-muted-foreground" />
-                      <a 
-                        href={account.website.startsWith('http') ? account.website : `https://${account.website}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        {account.website}
-                      </a>
-                    </div>
-                  )}
-                  {account.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <a href={`tel:${account.phone}`} className="hover:underline">
-                        {account.phone}
-                      </a>
-                    </div>
-                  )}
-                  {account.industry && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Factory className="h-4 w-4 text-muted-foreground" />
-                      <span>{account.industry}</span>
-                    </div>
-                  )}
-                  {(account.region || account.country) && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>{[account.region, account.country].filter(Boolean).join(', ')}</span>
-                    </div>
-                  )}
-                  {account.company_type && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <span>{account.company_type}</span>
-                    </div>
-                  )}
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {account.email && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <button 
+                          onClick={() => setShowEmailModal(true)}
+                          className="text-primary hover:underline truncate"
+                        >
+                          {account.email}
+                        </button>
+                      </div>
+                    )}
+                    {account.phone && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <a href={`tel:${account.phone}`} className="hover:underline truncate">
+                          {account.phone}
+                        </a>
+                      </div>
+                    )}
+                    {account.website && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <a 
+                          href={account.website.startsWith('http') ? account.website : `https://${account.website}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1 truncate"
+                        >
+                          <span className="truncate">{account.website}</span>
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                        </a>
+                      </div>
+                    )}
+                    {account.industry && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Factory className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span>{account.industry}</span>
+                      </div>
+                    )}
+                    {account.company_type && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span>{account.company_type}</span>
+                      </div>
+                    )}
+                    {(account.region || account.country) && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span>{[account.region, account.country].filter(Boolean).join(', ')}</span>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
