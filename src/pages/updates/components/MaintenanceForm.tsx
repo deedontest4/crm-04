@@ -48,12 +48,12 @@ const MaintenanceForm = ({ record, onClose }: MaintenanceFormProps) => {
 
       if (record) {
         const { error } = await supabase
-          .from("maintenance")
+          .from("maintenance" as any)
           .update(payload)
           .eq("id", record.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("maintenance").insert(payload);
+        const { error } = await supabase.from("maintenance" as any).insert(payload);
         if (error) throw error;
       }
     },

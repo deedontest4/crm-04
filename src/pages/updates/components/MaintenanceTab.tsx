@@ -27,12 +27,12 @@ const MaintenanceTab = () => {
   const { data: maintenance = [], isLoading } = useQuery({
     queryKey: ["maintenance"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("maintenance")
-        .select("*")
+      const { data, error } = await (supabase
+        .from("maintenance" as any)
+        .select("*") as any)
         .order("scheduled_date", { ascending: true });
       if (error) throw error;
-      return data as MaintenanceRecord[];
+      return (data || []) as MaintenanceRecord[];
     },
   });
 

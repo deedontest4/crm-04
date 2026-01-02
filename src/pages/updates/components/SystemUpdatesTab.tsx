@@ -37,12 +37,12 @@ const SystemUpdatesTab = () => {
   const { data: updates = [], isLoading } = useQuery({
     queryKey: ["system_updates"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("system_updates")
-        .select("*")
+      const { data, error } = await (supabase
+        .from("system_updates" as any)
+        .select("*") as any)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as SystemUpdate[];
+      return (data || []) as SystemUpdate[];
     },
   });
 
@@ -53,7 +53,7 @@ const SystemUpdatesTab = () => {
         updateData.installed_on = new Date().toISOString();
       }
       const { error } = await supabase
-        .from("system_updates")
+        .from("system_updates" as any)
         .update(updateData)
         .eq("id", id);
       if (error) throw error;
