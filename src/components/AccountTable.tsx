@@ -532,8 +532,8 @@ const AccountTable = forwardRef<AccountTableRef, AccountTableProps>(({
                     <Checkbox checked={selectedAccounts.length > 0 && selectedAccounts.length === Math.min(pageAccounts.length, 50)} onCheckedChange={handleSelectAll} />
                   </div>
                 </TableHead>
-                {visibleColumns.map(column => <TableHead key={column.field} className="text-left font-bold text-foreground px-4 py-3 whitespace-nowrap">
-                    <div onClick={() => handleSort(column.field)} className="group gap-2 cursor-pointer hover:text-primary flex items-center justify-center">
+                {visibleColumns.map(column => <TableHead key={column.field} className={`${['company_name', 'email'].includes(column.field) ? 'text-left' : 'text-center'} font-bold text-foreground px-4 py-3 whitespace-nowrap`}>
+                    <div onClick={() => handleSort(column.field)} className={`group gap-2 cursor-pointer hover:text-primary flex items-center ${['company_name', 'email'].includes(column.field) ? 'justify-start' : 'justify-center'}`}>
                       {column.label}
                       {getSortIcon(column.field)}
                     </div>
@@ -564,7 +564,7 @@ const AccountTable = forwardRef<AccountTableRef, AccountTableProps>(({
                         <Checkbox checked={selectedAccounts.includes(account.id)} onCheckedChange={checked => handleSelectAccount(account.id, checked as boolean)} />
                       </div>
                     </TableCell>
-                    {visibleColumns.map(column => <TableCell key={column.field} className="text-left px-4 py-3 align-middle whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+                    {visibleColumns.map(column => <TableCell key={column.field} className={`${['company_name', 'email'].includes(column.field) ? 'text-left' : 'text-center'} px-4 py-3 align-middle whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]`}>
                         {column.field === 'company_name' ? <button onClick={() => {
                     setViewingAccount(account);
                     setShowDetailModal(true);
