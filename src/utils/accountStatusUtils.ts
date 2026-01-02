@@ -33,14 +33,6 @@ export const getAccountStatusColor = (status?: string | null): string => {
   }
 };
 
-export const SEGMENT_OPTIONS = [
-  { value: 'prospect', label: 'Prospect' },
-  { value: 'customer', label: 'Customer' },
-  { value: 'partner', label: 'Partner' },
-  { value: 'vendor', label: 'Vendor' },
-  { value: 'competitor', label: 'Competitor' },
-] as const;
-
 export const COMPANY_TYPES = [
   'OEM',
   'Tier-1', 

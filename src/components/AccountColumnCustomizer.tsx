@@ -52,7 +52,7 @@ export const AccountColumnCustomizer = ({
     const existingFields = new Set(columns.map(c => c.field));
     const missingColumns = defaultAccountColumns.filter(dc => !existingFields.has(dc.field));
     
-    // Filter out removed columns (score, segment, total_revenue)
+    // Filter out invalid columns that are not in the default columns list
     const validColumns = columns.filter(c => 
       defaultAccountColumns.some(dc => dc.field === c.field)
     );
