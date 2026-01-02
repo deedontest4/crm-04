@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Eye, Building2 } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Eye, Building2, Pencil } from "lucide-react";
 import { RowActionsDropdown, Edit, Trash2, Mail } from "./RowActionsDropdown";
 import { AccountModal } from "./AccountModal";
 import { AccountColumnCustomizer, AccountColumnConfig, defaultAccountColumns } from "./AccountColumnCustomizer";
@@ -22,6 +22,7 @@ import { AccountDeleteConfirmDialog } from "./AccountDeleteConfirmDialog";
 import { SendEmailModal, EmailRecipient } from "./SendEmailModal";
 import { AccountDetailModal } from "./accounts/AccountDetailModal";
 import { HighlightedText } from "./shared/HighlightedText";
+import { getAccountStatusColor } from "@/utils/accountStatusUtils";
 import { ClearFiltersButton } from "./shared/ClearFiltersButton";
 import { TableSkeleton } from "./shared/Skeletons";
 import { useQuery } from "@tanstack/react-query";
@@ -435,26 +436,6 @@ const AccountTable = forwardRef<AccountTableRef, AccountTableProps>(({
     setOwnerFilter("all");
     setTagFilter(null);
   };
-  const getStatusBadgeClasses = (status?: string) => {
-    switch (status) {
-      case 'Hot':
-        return 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300 border-rose-200 dark:border-rose-800';
-      case 'Warm':
-        return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 border-amber-200 dark:border-amber-800';
-      case 'Working':
-        return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800';
-      case 'Nurture':
-        return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800';
-      case 'Closed-Won':
-        return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
-      case 'Closed-Lost':
-        return 'bg-gray-100 text-gray-600 dark:bg-gray-800/30 dark:text-gray-400 border-gray-200 dark:border-gray-700';
-      case 'New':
-        return 'bg-slate-100 text-slate-700 dark:bg-slate-800/30 dark:text-slate-300 border-slate-200 dark:border-slate-700';
-      default:
-        return 'bg-muted text-muted-foreground border-border';
-    }
-  };
 
   // Generate initials from company name
   const getCompanyInitials = (name: string) => {
@@ -578,7 +559,7 @@ const AccountTable = forwardRef<AccountTableRef, AccountTableProps>(({
                             )
                           ) : column.field === 'status' ? (
                             account.status ? (
-                              <Badge variant="outline" className={`whitespace-nowrap ${getStatusBadgeClasses(account.status)}`}>{account.status}</Badge>
+                              <Badge variant="outline" className={`whitespace-nowrap ${getAccountStatusColor(account.status)}`}>{account.status}</Badge>
                             ) : (
                               <span className="text-center text-muted-foreground w-full block">-</span>
                             )
@@ -643,43 +624,86 @@ const AccountTable = forwardRef<AccountTableRef, AccountTableProps>(({
                             )
                           )}
                       </TableCell>)}
-                    <TableCell className="w-20 px-4 py-3">
+                    <TableCell className="w-32 px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        {/* Quick actions visible on hover */}
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => {
+                              setViewingAccount(account);
+                              setShowDetailModal(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => {
+                              setEditingAccount(account);
+                              setShowModal(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          {account.email && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => {
+                                setEmailRecipient({
+                                  name: account.company_name,
+                                  email: account.email,
+                                  company_name: account.company_name
+                                });
+                                setEmailModalOpen(true);
+                              }}
+                            >
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {/* Dropdown for less common actions */}
                         <RowActionsDropdown actions={[{
-                    label: "View",
-                    icon: <Eye className="w-4 h-4" />,
-                    onClick: () => {
-                      setViewingAccount(account);
-                      setShowDetailModal(true);
-                    }
-                  }, {
-                    label: "Edit",
-                    icon: <Edit className="w-4 h-4" />,
-                    onClick: () => {
-                      setEditingAccount(account);
-                      setShowModal(true);
-                    }
-                  }, ...(account.email ? [{
-                    label: "Send Email",
-                    icon: <Mail className="w-4 h-4" />,
-                    onClick: () => {
-                      setEmailRecipient({
-                        name: account.company_name,
-                        email: account.email,
-                        company_name: account.company_name
-                      });
-                      setEmailModalOpen(true);
-                    }
-                  }] : []), {
-                    label: "Delete",
-                    icon: <Trash2 className="w-4 h-4" />,
-                    onClick: () => {
-                      setAccountToDelete(account);
-                      setShowDeleteDialog(true);
-                    },
-                    destructive: true,
-                    separator: true
-                  }]} />
+                          label: "View",
+                          icon: <Eye className="w-4 h-4" />,
+                          onClick: () => {
+                            setViewingAccount(account);
+                            setShowDetailModal(true);
+                          }
+                        }, {
+                          label: "Edit",
+                          icon: <Edit className="w-4 h-4" />,
+                          onClick: () => {
+                            setEditingAccount(account);
+                            setShowModal(true);
+                          }
+                        }, ...(account.email ? [{
+                          label: "Send Email",
+                          icon: <Mail className="w-4 h-4" />,
+                          onClick: () => {
+                            setEmailRecipient({
+                              name: account.company_name,
+                              email: account.email,
+                              company_name: account.company_name
+                            });
+                            setEmailModalOpen(true);
+                          }
+                        }] : []), {
+                          label: "Delete",
+                          icon: <Trash2 className="w-4 h-4" />,
+                          onClick: () => {
+                            setAccountToDelete(account);
+                            setShowDeleteDialog(true);
+                          },
+                          destructive: true,
+                          separator: true
+                        }]} />
                       </div>
                     </TableCell>
                   </TableRow>)}

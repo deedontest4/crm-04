@@ -24,13 +24,21 @@ const accountSchema = z.object({
   email: z.string().email("Please enter a valid email address (e.g., contact@company.com)").optional().or(z.literal("")),
   region: z.string().optional(),
   country: z.string().optional(),
-  website: z.string().url("Please enter a valid URL (e.g., https://company.com)").optional().or(z.literal("")),
+  website: z.string()
+    .refine((val) => !val || val.startsWith('http://') || val.startsWith('https://') || /^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}/.test(val), {
+      message: "Please enter a valid URL (e.g., https://company.com or company.com)"
+    })
+    .optional()
+    .or(z.literal("")),
   company_type: z.string().optional(),
   status: z.string().optional(),
   notes: z.string().max(2000, "Notes must be less than 2000 characters").optional(),
   industry: z.string().optional(),
-  phone: z.string().max(20, "Phone number must be less than 20 characters").optional(),
-  
+  phone: z.string()
+    .refine((val) => !val || /^[+]?[\d\s\-().]{7,20}$/.test(val), {
+      message: "Please enter a valid phone number (e.g., +1 234 567 8900)"
+    })
+    .optional(),
 });
 
 type AccountFormData = z.infer<typeof accountSchema>;

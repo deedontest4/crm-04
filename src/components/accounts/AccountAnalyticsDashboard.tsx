@@ -36,10 +36,13 @@ export const AccountAnalyticsDashboard = () => {
     }
   };
 
-  // Calculate stats
+  // Calculate stats - use actual status values from the database
   const stats = useMemo(() => {
     const totalAccounts = accounts.length;
-    const activeAccounts = accounts.filter(a => a.status === 'Active').length;
+    // Active accounts are those with statuses: Hot, Warm, Working
+    const activeAccounts = accounts.filter(a => 
+      ['Hot', 'Warm', 'Working'].includes(a.status || '')
+    ).length;
     const newAccounts = accounts.filter(a => a.status === 'New').length;
     return { totalAccounts, activeAccounts, newAccounts };
   }, [accounts]);
