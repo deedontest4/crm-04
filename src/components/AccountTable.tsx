@@ -224,7 +224,7 @@ const AccountTable = forwardRef<AccountTableRef, AccountTableProps>(({
         const aValue = a[sortField as keyof Account] || '';
         const bValue = b[sortField as keyof Account] || '';
 
-        // Handle numeric sorting for score, revenue, counts
+        // Handle numeric sorting for counts
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
         }
