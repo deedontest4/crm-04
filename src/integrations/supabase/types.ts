@@ -1233,6 +1233,42 @@ export type Database = {
           },
         ]
       }
+      maintenance: {
+        Row: {
+          asset_name: string
+          created_at: string
+          id: string
+          maintenance_type: string | null
+          notes: string | null
+          performed_by: string | null
+          scheduled_date: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          asset_name: string
+          created_at?: string
+          id?: string
+          maintenance_type?: string | null
+          notes?: string | null
+          performed_by?: string | null
+          scheduled_date: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asset_name?: string
+          created_at?: string
+          id?: string
+          maintenance_type?: string | null
+          notes?: string | null
+          performed_by?: string | null
+          scheduled_date?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meeting_follow_ups: {
         Row: {
           assigned_to: string | null
@@ -1705,6 +1741,51 @@ export type Database = {
           resource_type?: string
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      system_updates: {
+        Row: {
+          created_at: string
+          device_name: string
+          id: string
+          installed_on: string | null
+          last_checked: string | null
+          os_version: string | null
+          patch_id: string | null
+          remarks: string | null
+          status: string | null
+          update_type: string | null
+          update_version: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_name: string
+          id?: string
+          installed_on?: string | null
+          last_checked?: string | null
+          os_version?: string | null
+          patch_id?: string | null
+          remarks?: string | null
+          status?: string | null
+          update_type?: string | null
+          update_version?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_name?: string
+          id?: string
+          installed_on?: string | null
+          last_checked?: string | null
+          os_version?: string | null
+          patch_id?: string | null
+          remarks?: string | null
+          status?: string | null
+          update_type?: string | null
+          update_version?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

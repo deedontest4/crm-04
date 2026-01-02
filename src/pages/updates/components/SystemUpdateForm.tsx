@@ -56,12 +56,12 @@ const SystemUpdateForm = ({ update, onClose }: SystemUpdateFormProps) => {
 
       if (update) {
         const { error } = await supabase
-          .from("system_updates")
+          .from("system_updates" as any)
           .update(payload)
           .eq("id", update.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("system_updates").insert(payload);
+        const { error } = await supabase.from("system_updates" as any).insert(payload);
         if (error) throw error;
       }
     },
