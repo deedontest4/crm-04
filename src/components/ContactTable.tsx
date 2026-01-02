@@ -13,8 +13,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Eye, User, CalendarPlus } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Eye, User, CalendarPlus, Pencil } from "lucide-react";
 import { RowActionsDropdown, Edit, Trash2, Mail, UserPlus } from "./RowActionsDropdown";
+import { ContactDeleteConfirmDialog } from "./ContactDeleteConfirmDialog";
+import { ContactSegmentFilter } from "./ContactSegmentFilter";
 import { ContactModal } from "./ContactModal";
 import { ContactColumnCustomizer, ContactColumnConfig, defaultContactColumns } from "./ContactColumnCustomizer";
 import { ContactDetailModal } from "./contacts/ContactDetailModal";
@@ -24,7 +26,6 @@ import { MeetingModal } from "./MeetingModal";
 import { HighlightedText } from "./shared/HighlightedText";
 import { ClearFiltersButton } from "./shared/ClearFiltersButton";
 import { TableSkeleton } from "./shared/Skeletons";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useQuery } from "@tanstack/react-query";
 
 // Export ref interface for parent component
@@ -563,18 +564,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
             </SelectContent>
           </Select>
 
-          <Select value={segmentFilter} onValueChange={setSegmentFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="All Segments" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Segments</SelectItem>
-              <SelectItem value="prospect">Prospect</SelectItem>
-              <SelectItem value="customer">Customer</SelectItem>
-              <SelectItem value="partner">Partner</SelectItem>
-              <SelectItem value="vendor">Vendor</SelectItem>
-            </SelectContent>
-          </Select>
+          <ContactSegmentFilter value={segmentFilter} onValueChange={setSegmentFilter} />
 
           {tagFilter && (
             <Badge variant="secondary" className="flex items-center gap-1">
@@ -621,10 +611,10 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                 {visibleColumns.map(column => (
                   <TableHead
                     key={column.field}
-                    className="text-left font-bold text-foreground px-4 py-3 whitespace-nowrap"
+                    className={`font-bold text-foreground px-4 py-3 whitespace-nowrap ${column.field === 'contact_name' ? 'text-left' : 'text-center'}`}
                   >
                     <div
-                      className="group flex items-center gap-2 cursor-pointer hover:text-primary"
+                      className={`group flex items-center gap-2 cursor-pointer hover:text-primary ${column.field === 'contact_name' ? 'justify-start' : 'justify-center'}`}
                       onClick={() => handleSort(column.field)}
                     >
                       {column.label}
@@ -676,7 +666,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                     {visibleColumns.map(column => (
                       <TableCell
                         key={column.field}
-                        className="text-left px-4 py-3 align-middle whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]"
+                        className={`px-4 py-3 align-middle whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] ${column.field === 'contact_name' ? 'text-left' : 'text-center'}`}
                       >
                         {column.field === 'contact_name' ? (
                           <button
@@ -804,38 +794,44 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                         )}
                       </TableCell>
                     ))}
-                    <TableCell className="w-20 px-4 py-3">
+                    <TableCell className="w-32 px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
-                        {/* Quick view button on hover */}
+                        {/* Quick action icons on hover */}
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => handleViewContact(contact)}
+                          title="View"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleEditContact(contact)}
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            if (contact.email) {
+                              setEmailContact(contact);
+                              setEmailModalOpen(true);
+                            }
+                          }}
+                          disabled={!contact.email}
+                          title="Send Email"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </Button>
                         <RowActionsDropdown
                           actions={[
-                            {
-                              label: "View Details",
-                              icon: <Eye className="w-4 h-4" />,
-                              onClick: () => handleViewContact(contact)
-                            },
-                            {
-                              label: "Edit",
-                              icon: <Edit className="w-4 h-4" />,
-                              onClick: () => handleEditContact(contact)
-                            },
-                            {
-                              label: "Send Email",
-                              icon: <Mail className="w-4 h-4" />,
-                              onClick: () => {
-                                setEmailContact(contact);
-                                setEmailModalOpen(true);
-                              },
-                              disabled: !contact.email
-                            },
                             {
                               label: "Create Meeting",
                               icon: <CalendarPlus className="w-4 h-4" />,
@@ -941,29 +937,20 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         isSaving={isSaving}
       />
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the contact.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (contactToDelete) {
-                  handleDelete(contactToDelete);
-                  setContactToDelete(null);
-                }
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ContactDeleteConfirmDialog
+        open={showDeleteDialog}
+        onConfirm={() => {
+          if (contactToDelete) {
+            handleDelete(contactToDelete);
+            setContactToDelete(null);
+          }
+          setShowDeleteDialog(false);
+        }}
+        onCancel={() => {
+          setShowDeleteDialog(false);
+          setContactToDelete(null);
+        }}
+      />
 
       {/* Account View Modal */}
       <AccountDetailModalById open={accountViewOpen} onOpenChange={setAccountViewOpen} accountId={viewAccountId} />
