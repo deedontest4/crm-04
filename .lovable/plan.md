@@ -1,93 +1,97 @@
 
 
-## Make Horizontal Scrollbar Always Visible While Scrolling
+## Fix Duplicate Horizontal Scrollbar Issue
 
 ### Problem Analysis
 
-Currently, the `ListView.tsx` component uses a single `div` container with `overflow-auto` (line 395) that wraps the entire table. This causes the horizontal scrollbar to appear at the **bottom of the scrollable content** rather than at the **bottom of the visible viewport**.
+The current implementation has **two issues** causing duplicate scrollbars:
 
-When there are many rows, users must scroll all the way to the last row before the horizontal scrollbar becomes visible - making it impossible to scroll horizontally while viewing rows at the top or middle of the table.
+1. **Sticky scrollbar is inside the vertical scroll container**: The element with `position: sticky; bottom: 0` (lines 609-618) is placed inside the `overflow-y-auto` container. For `position: sticky` to work as a "pinned to viewport" element, it must be inside the scrolling container but the container must have the correct structure.
 
-### Solution Overview
+2. **Native scrollbar not properly hidden**: The table wrapper has `overflow-x-auto` which can still show a native scrollbar in some browsers.
 
-Implement a **synced sticky horizontal scrollbar** that:
-1. Stays pinned at the bottom of the visible viewport
-2. Only appears when horizontal scrolling is needed
-3. Syncs scroll position with the main table content
+3. **Structural issue**: The sticky scrollbar needs to be a direct child of the scroll container, but the current nesting causes the sticky element to scroll away with content.
 
-### Technical Approach
+### Root Cause
 
+The sticky scrollbar is placed after the table wrapper div, making it scroll with the table content. When you scroll to the bottom, both the sticky one AND the native browser scrollbar become visible.
+
+### Solution
+
+Restructure the layout so:
+1. The outer container handles **both** vertical and horizontal scrolling
+2. The sticky scrollbar is positioned correctly relative to the scroll container
+3. Properly hide the native horizontal scrollbar on the table wrapper
+4. Move the sticky scrollbar **outside** the scrollable area but sync with it
+
+---
+
+### Technical Changes
+
+**File: `src/components/ListView.tsx`**
+
+#### Change 1: Restructure Container Layout (lines 460-619)
+
+Current problematic structure:
 ```text
-+------------------------------------------+
-|  Filter Bar (fixed)                      |
-+------------------------------------------+
-|  Scroll Container (overflow-y: auto)     |
-|  +--------------------------------------+|
-|  | Table Header (sticky top)            ||
-|  +--------------------------------------+|
-|  | Row 1                                ||
-|  | Row 2                                ||
-|  | Row 3                                ||
-|  | ...                                  ||
-|  +--------------------------------------+|
-|  | Scrollbar Track (sticky bottom: 0)  ||  <-- Always visible
-|  +--------------------------------------+|
-+------------------------------------------+
-|  Pagination Footer (fixed)               |
-+------------------------------------------+
+scrollContainerRef (overflow-y-auto, overflow-x-hidden)
+├── tableWrapperRef (overflow-x-auto - creates native scrollbar!)
+│   └── Table
+└── Sticky scrollbar (scrolls away because it's inside the scroll container)
 ```
+
+New correct structure:
+```text
+Outer wrapper (flex column)
+├── scrollContainerRef + tableWrapperRef combined (overflow: auto for both axes)
+│   └── Table (hide scrollbar visually with CSS)
+└── Sticky scrollbar (OUTSIDE scroll container, syncs via JS)
+```
+
+#### Change 2: Combine scroll containers (lines 461-470)
+
+- Merge `scrollContainerRef` and `tableWrapperRef` into a single scroll container
+- Use `overflow: auto` for both directions on this container
+- Apply CSS to hide the native scrollbar: `-webkit-scrollbar: none` and `scrollbar-width: none`
+
+#### Change 3: Move sticky scrollbar outside scroll container (lines 609-619)
+
+- Position the sticky scrollbar **after** the main scroll container (sibling, not child)
+- Use `position: sticky; bottom: 0` on a wrapper that contains both the scroll container and scrollbar
+- Alternatively, use a fixed-position approach with proper syncing
+
+#### Change 4: Update scroll sync logic (lines 163-194)
+
+- Update refs to point to the correct elements after restructure
+- Ensure bidirectional sync still works with the new structure
 
 ---
 
 ### Implementation Details
 
-**File: `src/components/ListView.tsx`**
-
-#### Step 1: Add Scroll Sync Refs and State (around lines 62-66)
-
-Add new refs and state to track:
-- `scrollContainerRef` - Reference to the main scroll container
-- `scrollbarRef` - Reference to the sticky scrollbar element
-- `hasHorizontalOverflow` - Boolean to show/hide the scrollbar
-- `tableContentWidth` - Track the actual table width for the scrollbar
-
-#### Step 2: Add ResizeObserver Effect (new useEffect after line 128)
-
-Create a `useEffect` that:
-- Uses `ResizeObserver` to monitor the table width
-- Compares table width vs container width
-- Sets `hasHorizontalOverflow` to `true` when table is wider than container
-- Updates `tableContentWidth` for the scrollbar track
-
-#### Step 3: Add Scroll Sync Effect (new useEffect)
-
-Create bidirectional scroll sync:
-- When user scrolls the main table horizontally, update scrollbar position
-- When user drags the scrollbar, update table scroll position
-- Use `scrollLeft` property on both elements
-
-#### Step 4: Update Container Structure (lines 394-527)
-
-Restructure the content area:
-
 ```jsx
-{/* Outer container with vertical scroll */}
-<div 
-  ref={scrollContainerRef}
-  className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative"
->
-  {/* Table wrapper for horizontal scroll tracking */}
-  <div className="overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-    <Table ref={tableRef} className="w-full">
-      {/* ... existing table content ... */}
+{/* Wrapper for both scroll container and sticky scrollbar */}
+<div className="flex-1 min-h-0 flex flex-col relative">
+  {/* Main scroll container - handles BOTH vertical and horizontal */}
+  <div 
+    ref={scrollContainerRef}
+    className="flex-1 min-h-0 overflow-auto"
+    style={{ 
+      scrollbarWidth: 'none', 
+      msOverflowStyle: 'none' 
+    }}
+  >
+    <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+    <Table ref={tableRef} className="w-full hide-scrollbar">
+      {/* ... table content ... */}
     </Table>
   </div>
   
-  {/* Sticky Horizontal Scrollbar */}
+  {/* Sticky horizontal scrollbar - OUTSIDE the scroll container */}
   {hasHorizontalOverflow && (
     <div 
       ref={scrollbarRef}
-      className="sticky bottom-0 left-0 right-0 overflow-x-auto bg-background border-t z-10"
+      className="flex-shrink-0 overflow-x-auto bg-background border-t"
       style={{ scrollbarWidth: 'thin' }}
     >
       <div style={{ width: tableContentWidth, height: 1 }} />
@@ -96,9 +100,49 @@ Restructure the content area:
 </div>
 ```
 
-#### Step 5: Handle Hidden Scrollbar on Table
+#### Updated ResizeObserver Logic
 
-Add inline style or CSS class to hide the native scrollbar on the inner table wrapper while keeping scroll functionality via the sticky scrollbar.
+Update the overflow detection to use `scrollContainerRef` directly since we're combining the wrappers:
+
+```jsx
+useEffect(() => {
+  const scrollContainer = scrollContainerRef.current;
+  const table = tableRef.current;
+  
+  if (!scrollContainer || !table) return;
+
+  const checkOverflow = () => {
+    const containerWidth = scrollContainer.clientWidth;
+    const contentWidth = table.scrollWidth;
+    
+    setHasHorizontalOverflow(contentWidth > containerWidth);
+    setTableContentWidth(contentWidth);
+  };
+
+  // ... rest of ResizeObserver logic
+}, [columns, tempColumnWidths]);
+```
+
+#### Updated Scroll Sync Logic
+
+```jsx
+useEffect(() => {
+  const scrollContainer = scrollContainerRef.current;
+  const scrollbar = scrollbarRef.current;
+  
+  if (!scrollContainer || !scrollbar) return;
+
+  // Sync scrollContainer horizontal position with scrollbar
+  const handleContainerScroll = () => {
+    if (isSyncingFromScrollbar) return;
+    isSyncingFromTable = true;
+    scrollbar.scrollLeft = scrollContainer.scrollLeft;
+    // ...
+  };
+
+  // ... rest of sync logic using scrollContainer instead of tableWrapperRef
+}, [hasHorizontalOverflow]);
+```
 
 ---
 
@@ -106,23 +150,16 @@ Add inline style or CSS class to hide the native scrollbar on the inner table wr
 
 | Location | Change |
 |----------|--------|
-| Lines 62-66 | Add `scrollContainerRef`, `scrollbarRef`, `hasHorizontalOverflow`, `tableContentWidth` |
-| After line 128 | Add `useEffect` for ResizeObserver to detect overflow |
-| After ResizeObserver effect | Add `useEffect` for bidirectional scroll sync |
-| Lines 394-527 | Restructure container with sticky scrollbar element |
+| Lines 69-70 | Remove `tableWrapperRef` - no longer needed |
+| Lines 137-161 | Update ResizeObserver to use `scrollContainerRef` directly |
+| Lines 163-194 | Update scroll sync to use `scrollContainerRef` instead of `tableWrapperRef` |
+| Lines 460-470 | Combine into single scroll container with hidden scrollbar |
+| Lines 609-619 | Move sticky scrollbar OUTSIDE the scroll container as sibling |
 
-### Browser Compatibility
+### Expected Result
 
-This approach uses:
-- `ResizeObserver` - Supported in all modern browsers
-- `position: sticky` - Full support in modern browsers
-- `scrollLeft` sync - Standard DOM API
-
-### Expected Behavior After Implementation
-
-1. User opens Deals list view with many columns
-2. Horizontal scrollbar appears at the bottom of the **visible area** immediately
-3. User scrolls vertically through rows - scrollbar stays pinned at bottom
-4. User can scroll horizontally at any time, regardless of vertical position
-5. Scrollbar only appears when content is wider than the container
+1. Only ONE horizontal scrollbar visible (the sticky one at bottom)
+2. Scrollbar stays pinned to viewport bottom while scrolling vertically
+3. Scrollbar properly syncs with table horizontal scroll position
+4. Native browser scrollbar is completely hidden
 
