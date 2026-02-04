@@ -67,7 +67,6 @@ export const ListView = ({
   
   // Sticky horizontal scrollbar refs and state
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const tableWrapperRef = useRef<HTMLDivElement>(null);
   const scrollbarRef = useRef<HTMLDivElement>(null);
   const [hasHorizontalOverflow, setHasHorizontalOverflow] = useState(false);
   const [tableContentWidth, setTableContentWidth] = useState(0);
@@ -136,13 +135,13 @@ export const ListView = ({
 
   // Detect horizontal overflow using ResizeObserver
   useEffect(() => {
-    const tableWrapper = tableWrapperRef.current;
+    const scrollContainer = scrollContainerRef.current;
     const table = tableRef.current;
     
-    if (!tableWrapper || !table) return;
+    if (!scrollContainer || !table) return;
 
     const checkOverflow = () => {
-      const containerWidth = tableWrapper.clientWidth;
+      const containerWidth = scrollContainer.clientWidth;
       const contentWidth = table.scrollWidth;
       
       setHasHorizontalOverflow(contentWidth > containerWidth);
@@ -154,41 +153,41 @@ export const ListView = ({
 
     // Observe size changes
     const resizeObserver = new ResizeObserver(checkOverflow);
-    resizeObserver.observe(tableWrapper);
+    resizeObserver.observe(scrollContainer);
     resizeObserver.observe(table);
 
     return () => resizeObserver.disconnect();
   }, [columns, tempColumnWidths]);
 
-  // Bidirectional scroll sync between table wrapper and sticky scrollbar
+  // Bidirectional scroll sync between scroll container and sticky scrollbar
   useEffect(() => {
-    const tableWrapper = tableWrapperRef.current;
+    const scrollContainer = scrollContainerRef.current;
     const scrollbar = scrollbarRef.current;
     
-    if (!tableWrapper || !scrollbar) return;
+    if (!scrollContainer || !scrollbar) return;
 
-    let isSyncingFromTable = false;
+    let isSyncingFromContainer = false;
     let isSyncingFromScrollbar = false;
 
-    const handleTableScroll = () => {
+    const handleContainerScroll = () => {
       if (isSyncingFromScrollbar) return;
-      isSyncingFromTable = true;
-      scrollbar.scrollLeft = tableWrapper.scrollLeft;
-      requestAnimationFrame(() => { isSyncingFromTable = false; });
+      isSyncingFromContainer = true;
+      scrollbar.scrollLeft = scrollContainer.scrollLeft;
+      requestAnimationFrame(() => { isSyncingFromContainer = false; });
     };
 
     const handleScrollbarScroll = () => {
-      if (isSyncingFromTable) return;
+      if (isSyncingFromContainer) return;
       isSyncingFromScrollbar = true;
-      tableWrapper.scrollLeft = scrollbar.scrollLeft;
+      scrollContainer.scrollLeft = scrollbar.scrollLeft;
       requestAnimationFrame(() => { isSyncingFromScrollbar = false; });
     };
 
-    tableWrapper.addEventListener('scroll', handleTableScroll);
+    scrollContainer.addEventListener('scroll', handleContainerScroll);
     scrollbar.addEventListener('scroll', handleScrollbarScroll);
 
     return () => {
-      tableWrapper.removeEventListener('scroll', handleTableScroll);
+      scrollContainer.removeEventListener('scroll', handleContainerScroll);
       scrollbar.removeEventListener('scroll', handleScrollbarScroll);
     };
   }, [hasHorizontalOverflow]);
@@ -457,15 +456,12 @@ export const ListView = ({
         </div>
       </div>
 
-      {/* Content Area - vertical scroll container with sticky horizontal scrollbar */}
-      <div 
-        ref={scrollContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative"
-      >
-        {/* Table wrapper for horizontal scroll tracking */}
+      {/* Content Area - wrapper for scroll container and sticky scrollbar */}
+      <div className="flex-1 min-h-0 flex flex-col relative">
+        {/* Main scroll container - handles BOTH vertical and horizontal scrolling */}
         <div 
-          ref={tableWrapperRef}
-          className="overflow-x-auto"
+          ref={scrollContainerRef}
+          className="flex-1 min-h-0 overflow-auto"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           <style>{`
@@ -606,11 +602,11 @@ export const ListView = ({
           </Table>
         </div>
         
-        {/* Sticky Horizontal Scrollbar - always visible at bottom of viewport */}
+        {/* Sticky horizontal scrollbar - OUTSIDE the scroll container */}
         {hasHorizontalOverflow && (
           <div 
             ref={scrollbarRef}
-            className="sticky bottom-0 left-0 right-0 overflow-x-auto bg-background/95 backdrop-blur-sm border-t z-10"
+            className="flex-shrink-0 overflow-x-auto bg-background border-t"
             style={{ scrollbarWidth: 'thin' }}
           >
             <div style={{ width: tableContentWidth, height: 1 }} />
