@@ -6,7 +6,6 @@ import { createRecordValidator } from './recordValidator';
 import { createDuplicateChecker } from './duplicateChecker';
 import { LeadsCSVProcessor } from './leadsCSVProcessor';
 import { DateFormatUtils } from '@/utils/dateFormatUtils';
-import { UserNameUtils } from '@/utils/userNameUtils';
 
 export interface ProcessingOptions {
   tableName: string;
@@ -65,11 +64,6 @@ export class GenericCSVProcessor {
       });
       console.log('GenericCSVProcessor: Column mapping:', columnMap);
 
-      // Collect user names from CSV for user fields
-      const userNames = UserNameUtils.extractUserNames(rows, headers, UserNameUtils.USER_FIELDS);
-      const userIdMap = await UserNameUtils.fetchUserIdsByNames(userNames);
-      console.log('GenericCSVProcessor: Fetched user IDs for', Object.keys(userIdMap).length, 'users');
-
       const result: ProcessingResult = {
         successCount: 0,
         updateCount: 0,
@@ -82,7 +76,7 @@ export class GenericCSVProcessor {
       const batchSize = 50;
       for (let i = 0; i < rows.length; i += batchSize) {
         const batch = rows.slice(i, i + batchSize);
-        const batchResult = await this.processBatch(batch, headers, columnMap, options, userIdMap);
+        const batchResult = await this.processBatch(batch, headers, columnMap, options);
         
         result.successCount += batchResult.successCount;
         result.updateCount += batchResult.updateCount;
@@ -109,8 +103,7 @@ export class GenericCSVProcessor {
     rows: string[][],
     headers: string[],
     columnMap: Record<string, string>,
-    options: ProcessingOptions,
-    userIdMap: Record<string, string>
+    options: ProcessingOptions
   ): Promise<ProcessingResult> {
     
     const recordValidator = createRecordValidator(options.tableName);
@@ -131,11 +124,6 @@ export class GenericCSVProcessor {
           const dbColumn = columnMap[header];
           if (dbColumn && row[index] !== undefined) {
             let value = row[index];
-            
-            // Convert display name to UUID for user fields
-            if (UserNameUtils.isUserField(dbColumn) && value) {
-              value = UserNameUtils.resolveUserId(value, userIdMap, options.userId);
-            }
             
             // Apply date formatting if needed
             const processedValue = DateFormatUtils.processFieldForImport(dbColumn, value);

@@ -130,9 +130,18 @@ export default {
     			'fade-in': 'fade-in 0.3s ease-out',
     			'slide-up': 'slide-up 0.3s ease-out'
     		},
+    		boxShadow: {
+    			'2xs': 'var(--shadow-2xs)',
+    			xs: 'var(--shadow-xs)',
+    			sm: 'var(--shadow-sm)',
+    			md: 'var(--shadow-md)',
+    			lg: 'var(--shadow-lg)',
+    			xl: 'var(--shadow-xl)',
+    			'2xl': 'var(--shadow-2xl)'
+    		},
     		fontFamily: {
     			sans: [
-    				'Inter',
+    				'DM Sans',
     				'ui-sans-serif',
     				'system-ui',
     				'-apple-system',
@@ -145,7 +154,7 @@ export default {
     				'sans-serif'
     			],
     			serif: [
-    				'Lora',
+    				'Crimson Pro',
     				'ui-serif',
     				'Georgia',
     				'Cambria',
@@ -154,7 +163,7 @@ export default {
     				'serif'
     			],
     			mono: [
-    				'Space Mono',
+    				'SF Mono',
     				'ui-monospace',
     				'SFMono-Regular',
     				'Menlo',
@@ -164,15 +173,6 @@ export default {
     				'Courier New',
     				'monospace'
     			]
-    		},
-    		boxShadow: {
-    			'2xs': 'var(--shadow-2xs)',
-    			xs: 'var(--shadow-xs)',
-    			sm: 'var(--shadow-sm)',
-    			md: 'var(--shadow-md)',
-    			lg: 'var(--shadow-lg)',
-    			xl: 'var(--shadow-xl)',
-    			'2xl': 'var(--shadow-2xl)'
     		}
     	}
     },

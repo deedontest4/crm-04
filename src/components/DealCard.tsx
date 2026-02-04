@@ -40,12 +40,13 @@ export const DealCard = ({
 
   return (
     <Card
-      className={`deal-card cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md group ${
-        isDragging ? 'opacity-50 shadow-lg' : ''
-      } ${isSelected ? 'ring-2 ring-primary bg-primary/5 border-primary' : ''} ${
+      className={`deal-card cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 ${
+        isDragging ? 'opacity-50' : ''
+      } ${isSelected ? 'ring-2 ring-primary bg-primary/10 border-primary' : ''} ${
         selectionMode ? 'pl-8' : ''
-      } animate-fade-in border-border/50 min-h-[180px]`}
+      } animate-fade-in border-border/50 hover:bg-gradient-to-br hover:from-card hover:to-primary/5 button-scale min-h-[180px]`}
       onClick={onClick}
+      style={{ boxShadow: 'var(--shadow-sm)' }}
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between mb-2">
@@ -58,7 +59,7 @@ export const DealCard = ({
                 size="sm"
                 variant="ghost"
                 onClick={handleMoveToDropped}
-                className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1 h-6 w-6 bg-amber-50 hover:bg-amber-100 text-amber-700"
+                className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1 h-6 w-6 bg-orange-100 hover:bg-orange-200 text-orange-600"
                 title="Move to Dropped"
               >
                 <XCircle className="w-3 h-3" />
@@ -145,7 +146,7 @@ export const DealCard = ({
             <p className="text-xs text-muted-foreground font-medium">
               {(() => {
                 try {
-                  return format(new Date(deal.expected_closing_date), 'dd/MM/yyyy');
+                  return format(new Date(deal.expected_closing_date), 'MMM dd, yyyy');
                 } catch {
                   return 'Invalid date';
                 }
@@ -157,7 +158,7 @@ export const DealCard = ({
         <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground border-t border-border/30">
           <span className="font-medium">Updated: {deal.modified_at ? (() => {
             try {
-              return format(new Date(deal.modified_at), 'dd/MM');
+              return format(new Date(deal.modified_at), 'MMM dd');
             } catch {
               return 'Unknown';
             }
