@@ -1,27 +1,39 @@
 
 
-## Increase Details Panel Width and Height
+## Fix History and Action Items Section Heights
 
-### What Changes
+### Goal
+Both the History and Action Items sections should always maintain a consistent fixed height, regardless of how many records they contain. When records exceed 7 rows, a scrollbar appears. When fewer or no records exist, the section retains the same space.
 
-Only the sizing values for the details panel will be updated — no other logic, styling, or behavior changes.
+### Changes
 
-### Files to Modify
+**File: `src/components/DealExpandedPanel.tsx`**
 
-**1. `src/components/KanbanBoard.tsx` (line 502-503)**
-- Change expanded stage column from `minmax(280px, 280px)` to `minmax(300px, 300px)`
-- Change details panel column from `minmax(600px, 2fr)` to `minmax(750px, 3fr)` for a wider details area
+#### History Section (lines 345-412)
+- Replace the current `CollapsibleContent` inner wrapper (`div` + `ScrollArea` with `h-full`) with a fixed-height container
+- Set a fixed height of approximately `280px` (7 rows x ~36px per row + header row) using `h-[280px]` or a similar value
+- Keep `overflow-y-auto` so scrollbar appears when content exceeds 7 rows
+- When there are no records or fewer records, the container stays at the same height (empty space preserved)
 
-**2. `src/components/kanban/AnimatedStageHeaders.tsx` (lines 51-52)**
-- Same grid column changes to keep headers aligned with the body columns:
-  - `minmax(280px, 280px)` becomes `minmax(300px, 300px)`
-  - `minmax(600px, 2fr)` becomes `minmax(750px, 3fr)`
+#### Action Items Section (lines 456-548)
+- Apply the same fixed-height treatment as History
+- Replace `h-full` with a matching fixed height (`h-[280px]`)
+- Same overflow behavior: scroll when more than 7 rows, keep space when fewer
 
-**3. `src/components/kanban/InlineDetailsPanel.tsx` (lines 23-25)**
-- Increase `minHeight` from `400px` to `550px`
-- Increase `maxHeight` from `calc(100vh - 180px)` to `calc(100vh - 140px)` to use more vertical space
+### Technical Details
 
-### Result
+For both sections, the `CollapsibleContent` inner `div` (lines 346 and 457) changes from:
+```
+<div className="h-full overflow-hidden">
+  <ScrollArea className="h-full">
+```
+To:
+```
+<div className="h-[280px] overflow-y-auto">
+```
 
-The details panel will be noticeably wider (750px minimum instead of 600px) and taller (550px minimum, more vertical room), giving the History and Action Items sections more breathing room as shown in the reference screenshot.
+This removes the `ScrollArea` component dependency for these sections and uses native scrollbar with a fixed height, ensuring:
+- Exactly 7 rows visible before scrollbar kicks in
+- Empty/few-record states still occupy the full 280px height
+- Both sections always take the same vertical space
 
