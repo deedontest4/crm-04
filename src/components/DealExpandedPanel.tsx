@@ -343,72 +343,70 @@ const parseChangeSummary = (action: string, details: Record<string, unknown> | n
                </button>
              </CollapsibleTrigger>
             <CollapsibleContent className="flex-1 min-h-0 collapsible-content data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
-              <div className="h-full overflow-hidden">
-                 <ScrollArea className="h-full">
-                   {isLoading ? (
-                     <div className="flex items-center justify-center py-6">
-                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                     </div>
-                   ) : auditLogs.length === 0 ? (
-                     <div className="flex items-center justify-center py-6 text-muted-foreground">
-                       <History className="h-4 w-4 mr-2" />
-                       <span className="text-xs">No history yet</span>
-                     </div>
-                   ) : (
-                     <Table>
-                       <TableHeader>
-                         <TableRow className="text-[11px]">
-                            <TableHead className="h-7 px-2 text-[11px] w-28">Time</TableHead>
-                            <TableHead className="h-7 px-2 text-[11px] w-16">Type</TableHead>
-                            <TableHead className="h-7 px-2 text-[11px] w-20">By</TableHead>
-                            <TableHead className="h-7 px-2 text-[11px]">Changes</TableHead>
-                            <TableHead className="h-7 px-2 text-[11px] w-8"></TableHead>
-                         </TableRow>
-                       </TableHeader>
-                       <TableBody>
-                         {auditLogs.map((log) => (
-                           <TableRow key={log.id} className="text-xs hover:bg-muted/30">
-                             <TableCell className="py-1.5 px-2 text-[10px] text-muted-foreground whitespace-nowrap">
-                               {formatHistoryDateTime(new Date(log.created_at))}
-                             </TableCell>
-                             <TableCell className="py-1.5 px-2">
-                               <div className="flex items-center gap-1">
-                                 {log.action === 'NOTE' || log.action === 'CALL' || log.action === 'MEETING' || log.action === 'EMAIL' ? (
-                                   <>
-                                     {log.action === 'CALL' && <Phone className="h-3 w-3 text-blue-500" />}
-                                     {log.action === 'MEETING' && <Calendar className="h-3 w-3 text-purple-500" />}
-                                     {log.action === 'EMAIL' && <Mail className="h-3 w-3 text-green-500" />}
-                                     {log.action === 'NOTE' && <FileText className="h-3 w-3 text-yellow-500" />}
-                                   </>
-                                 ) : (
-                                   <Clock className="h-3 w-3 text-muted-foreground" />
-                                 )}
-                                 <span className="capitalize text-[10px]">{log.action.toLowerCase()}</span>
-                               </div>
-                             </TableCell>
-                              <TableCell className="py-1.5 px-2 text-muted-foreground max-w-[80px] truncate text-[10px]">
-                                {log.user_id ? (displayNames[log.user_id] || '...') : '-'}
+               <div className="h-[280px] overflow-y-auto">
+                    {isLoading ? (
+                      <div className="flex items-center justify-center py-6">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                      </div>
+                    ) : auditLogs.length === 0 ? (
+                      <div className="flex items-center justify-center py-6 text-muted-foreground">
+                        <History className="h-4 w-4 mr-2" />
+                        <span className="text-xs">No history yet</span>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="text-[11px]">
+                             <TableHead className="h-7 px-2 text-[11px] w-28">Time</TableHead>
+                             <TableHead className="h-7 px-2 text-[11px] w-16">Type</TableHead>
+                             <TableHead className="h-7 px-2 text-[11px] w-20">By</TableHead>
+                             <TableHead className="h-7 px-2 text-[11px]">Changes</TableHead>
+                             <TableHead className="h-7 px-2 text-[11px] w-8"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {auditLogs.map((log) => (
+                            <TableRow key={log.id} className="text-xs hover:bg-muted/30">
+                              <TableCell className="py-1.5 px-2 text-[10px] text-muted-foreground whitespace-nowrap">
+                                {formatHistoryDateTime(new Date(log.created_at))}
                               </TableCell>
-                             <TableCell className="py-1.5 px-2 max-w-[150px] truncate text-muted-foreground text-[10px]">
-                                {(log.details as any)?.message || parseChangeSummary(log.action, log.details)}
-                             </TableCell>
-                             <TableCell className="py-1.5 px-2">
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 className="h-5 w-5 p-0"
-                                 onClick={() => setDetailLogId(log.id)}
-                               >
-                                 <Eye className="h-3 w-3" />
-                               </Button>
-                             </TableCell>
-                           </TableRow>
-                         ))}
-                       </TableBody>
-                     </Table>
-                   )}
-                 </ScrollArea>
-               </div>
+                              <TableCell className="py-1.5 px-2">
+                                <div className="flex items-center gap-1">
+                                  {log.action === 'NOTE' || log.action === 'CALL' || log.action === 'MEETING' || log.action === 'EMAIL' ? (
+                                    <>
+                                      {log.action === 'CALL' && <Phone className="h-3 w-3 text-blue-500" />}
+                                      {log.action === 'MEETING' && <Calendar className="h-3 w-3 text-purple-500" />}
+                                      {log.action === 'EMAIL' && <Mail className="h-3 w-3 text-green-500" />}
+                                      {log.action === 'NOTE' && <FileText className="h-3 w-3 text-yellow-500" />}
+                                    </>
+                                  ) : (
+                                    <Clock className="h-3 w-3 text-muted-foreground" />
+                                  )}
+                                  <span className="capitalize text-[10px]">{log.action.toLowerCase()}</span>
+                                </div>
+                              </TableCell>
+                               <TableCell className="py-1.5 px-2 text-muted-foreground max-w-[80px] truncate text-[10px]">
+                                 {log.user_id ? (displayNames[log.user_id] || '...') : '-'}
+                               </TableCell>
+                              <TableCell className="py-1.5 px-2 max-w-[150px] truncate text-muted-foreground text-[10px]">
+                                 {(log.details as any)?.message || parseChangeSummary(log.action, log.details)}
+                              </TableCell>
+                              <TableCell className="py-1.5 px-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 w-5 p-0"
+                                  onClick={() => setDetailLogId(log.id)}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                </div>
              </CollapsibleContent>
            </Collapsible>
  
@@ -454,100 +452,98 @@ const parseChangeSummary = (action: string, details: Record<string, unknown> | n
                </button>
              </CollapsibleTrigger>
             <CollapsibleContent className="flex-1 min-h-0 collapsible-content data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
-              <div className="h-full overflow-hidden">
-                 <ScrollArea className="h-full">
-                   {isLoading ? (
-                     <div className="flex items-center justify-center py-6">
-                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                     </div>
-                   ) : actionItems.length === 0 ? (
-                     <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
-                       <ListTodo className="h-4 w-4 mb-1" />
-                       <span className="text-xs">No action items</span>
-                       <Button
-                         variant="link"
-                         size="sm"
-                         className="text-xs h-6 mt-1"
-                         onClick={() => onOpenActionItemModal?.()}
-                       >
-                         Add one
-                       </Button>
-                     </div>
-                   ) : (
-                     <Table>
-                       <TableHeader>
-                         <TableRow className="text-[11px]">
-                           <TableHead className="h-7 px-2 text-[11px]">Title</TableHead>
-                           <TableHead className="h-7 px-2 text-[11px] w-20">Assigned</TableHead>
-                           <TableHead className="h-7 px-2 text-[11px] w-14">Status</TableHead>
-                           <TableHead className="h-7 px-2 text-[11px] w-14">Priority</TableHead>
-                           <TableHead className="h-7 px-2 text-[11px] w-16">Due</TableHead>
-                           <TableHead className="h-7 px-2 text-[11px] w-10"></TableHead>
-                         </TableRow>
-                       </TableHeader>
-                       <TableBody>
-                         {sortedActionItems.map((item) => (
-                           <TableRow 
-                             key={item.id} 
-                             className="text-xs cursor-pointer hover:bg-muted/30"
-                             onClick={() => handleActionItemClick(item)}
-                           >
-                             <TableCell className="py-1.5 px-2 max-w-[120px]">
-                               <TooltipProvider>
-                                 <Tooltip>
-                                   <TooltipTrigger asChild>
-                                     <span className="truncate block">{item.title}</span>
-                                   </TooltipTrigger>
-                                   <TooltipContent>
-                                     <p className="max-w-[200px]">{item.title}</p>
-                                   </TooltipContent>
-                                 </Tooltip>
-                               </TooltipProvider>
-                             </TableCell>
-                             <TableCell className="py-1.5 px-2 text-[10px] text-muted-foreground max-w-[80px] truncate">
-                               {item.assigned_to ? (
-                                 <span className="flex items-center gap-1">
-                                   <User className="h-2.5 w-2.5" />
-                                   {displayNames[item.assigned_to] || '...'}
-                                 </span>
-                               ) : (
-                                 <span className="text-muted-foreground/50">Unassigned</span>
-                               )}
-                             </TableCell>
-                             <TableCell className="py-1.5 px-2">
-                               <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                 item.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                 item.status === 'In Progress' ? 'bg-yellow-100 text-yellow-700' :
-                                 'bg-blue-100 text-blue-700'
-                               }`}>
-                                 {item.status}
-                               </span>
-                             </TableCell>
-                             <TableCell className="py-1.5 px-2">
-                               <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                 item.priority === 'High' ? 'bg-red-100 text-red-700' :
-                                 item.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                                 'bg-gray-100 text-gray-700'
-                               }`}>
-                                 {item.priority}
-                               </span>
-                             </TableCell>
-                             <TableCell className="py-1.5 px-2 text-[10px] text-muted-foreground">
-                               {item.due_date ? format(new Date(item.due_date), 'dd-MM-yy') : '-'}
-                             </TableCell>
-                             <TableCell className="py-1.5 px-2">
-                               <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                             </TableCell>
-                           </TableRow>
-                         ))}
-                       </TableBody>
-                     </Table>
-                   )}
-                 </ScrollArea>
-               </div>
-             </CollapsibleContent>
-           </Collapsible>
-         </div>
+               <div className="h-[280px] overflow-y-auto">
+                    {isLoading ? (
+                      <div className="flex items-center justify-center py-6">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                      </div>
+                    ) : actionItems.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                        <ListTodo className="h-4 w-4 mb-1" />
+                        <span className="text-xs">No action items</span>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="text-xs h-6 mt-1"
+                          onClick={() => onOpenActionItemModal?.()}
+                        >
+                          Add one
+                        </Button>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="text-[11px]">
+                            <TableHead className="h-7 px-2 text-[11px]">Title</TableHead>
+                            <TableHead className="h-7 px-2 text-[11px] w-20">Assigned</TableHead>
+                            <TableHead className="h-7 px-2 text-[11px] w-14">Status</TableHead>
+                            <TableHead className="h-7 px-2 text-[11px] w-14">Priority</TableHead>
+                            <TableHead className="h-7 px-2 text-[11px] w-16">Due</TableHead>
+                            <TableHead className="h-7 px-2 text-[11px] w-10"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sortedActionItems.map((item) => (
+                            <TableRow 
+                              key={item.id} 
+                              className="text-xs cursor-pointer hover:bg-muted/30"
+                              onClick={() => handleActionItemClick(item)}
+                            >
+                              <TableCell className="py-1.5 px-2 max-w-[120px]">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="truncate block">{item.title}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-[200px]">{item.title}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </TableCell>
+                              <TableCell className="py-1.5 px-2 text-[10px] text-muted-foreground max-w-[80px] truncate">
+                                {item.assigned_to ? (
+                                  <span className="flex items-center gap-1">
+                                    <User className="h-2.5 w-2.5" />
+                                    {displayNames[item.assigned_to] || '...'}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground/50">Unassigned</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-1.5 px-2">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                  item.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                                  item.status === 'In Progress' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {item.status}
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-1.5 px-2">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                  item.priority === 'High' ? 'bg-red-100 text-red-700' :
+                                  item.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {item.priority}
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-1.5 px-2 text-[10px] text-muted-foreground">
+                                {item.due_date ? format(new Date(item.due_date), 'dd-MM-yy') : '-'}
+                              </TableCell>
+                              <TableCell className="py-1.5 px-2">
+                                <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
        </div>
  
        {/* Detail Log Dialog - With proper field changes table */}
