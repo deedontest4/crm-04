@@ -45,12 +45,25 @@ export class DateFormatUtils {
   }
   
   // Convert date from multiple formats to YYYY-MM-DD for database import
+  // Supports Zoho CRM format: DD-MM-YY HH:mm
   static convertDateForImport(dateValue: string): string | null {
     if (!dateValue || dateValue.trim() === '') return null;
     
     const trimmedValue = dateValue.trim();
     
     try {
+      // Handle Zoho CRM format: DD-MM-YY HH:mm (e.g., "08-05-20 14:52")
+      const zohoFormatMatch = trimmedValue.match(/^(\d{2})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/);
+      if (zohoFormatMatch) {
+        const [, day, month, year, hours, minutes] = zohoFormatMatch;
+        // Assume 20xx for 2-digit years
+        const fullYear = 2000 + parseInt(year);
+        const parsedDate = new Date(fullYear, parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
+        if (!isNaN(parsedDate.getTime())) {
+          return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:00`;
+        }
+      }
+
       // Handle already correct YYYY-MM-DD format
       const yyyymmddMatch = trimmedValue.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
       if (yyyymmddMatch) {
@@ -144,7 +157,8 @@ export class DateFormatUtils {
     ];
     
     const datetimeFields = [
-      'created_at', 'modified_at', 'created_time', 'modified_time'
+      'created_at', 'modified_at', 'created_time', 'modified_time',
+      'last_activity_time' // Zoho CRM field
     ];
     
     if (dateFields.includes(fieldName)) return 'date';

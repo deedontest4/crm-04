@@ -2,7 +2,9 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Deal, DealStage, getNextStage, getFinalStageOptions, getStageIndex, DEAL_STAGES } from "@/types/deal";
 import { useToast } from "@/hooks/use-toast";
@@ -20,9 +22,11 @@ interface DealFormProps {
   onRefresh?: () => Promise<void>;
   isCreating?: boolean;
   initialStage?: DealStage;
+   onDelete?: (dealId: string) => void;
 }
 
-export const DealForm = ({ deal, isOpen, onClose, onSave, isCreating = false, initialStage, onRefresh }: DealFormProps) => {
+ export const DealForm = ({ deal, isOpen, onClose, onSave, isCreating = false, initialStage, onRefresh, onDelete }: DealFormProps) => {
+   const [deleteLoading, setDeleteLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Deal>>({});
   const [loading, setLoading] = useState(false);
   const [showPreviousStages, setShowPreviousStages] = useState(false);
@@ -302,6 +306,25 @@ export const DealForm = ({ deal, isOpen, onClose, onSave, isCreating = false, in
     setActionModalOpen(true);
   };
 
+   const handleDelete = async () => {
+     if (!deal?.id || !onDelete) return;
+     
+     setDeleteLoading(true);
+     try {
+       onDelete(deal.id);
+       onClose();
+     } catch (error) {
+       console.error("Error deleting deal:", error);
+       toast({
+         title: "Error",
+         description: "Failed to delete deal",
+         variant: "destructive",
+       });
+     } finally {
+       setDeleteLoading(false);
+     }
+   };
+ 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -352,6 +375,35 @@ export const DealForm = ({ deal, isOpen, onClose, onSave, isCreating = false, in
               <Button type="submit" disabled={loading} className="btn-primary">
                 {loading ? "Saving..." : "Save"}
               </Button>
+               {/* Delete button - only for existing deals */}
+               {!isCreating && deal && onDelete && (
+                 <AlertDialog>
+                   <AlertDialogTrigger asChild>
+                     <Button 
+                       type="button" 
+                       variant="destructive" 
+                       disabled={deleteLoading}
+                     >
+                       <Trash2 className="w-4 h-4 mr-2" />
+                       {deleteLoading ? "Deleting..." : "Delete"}
+                     </Button>
+                   </AlertDialogTrigger>
+                   <AlertDialogContent>
+                     <AlertDialogHeader>
+                       <AlertDialogTitle>Delete Deal</AlertDialogTitle>
+                       <AlertDialogDescription>
+                         Are you sure you want to delete "{deal.project_name || deal.deal_name}"? This action cannot be undone.
+                       </AlertDialogDescription>
+                     </AlertDialogHeader>
+                     <AlertDialogFooter>
+                       <AlertDialogCancel>Cancel</AlertDialogCancel>
+                       <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                         Delete
+                       </AlertDialogAction>
+                     </AlertDialogFooter>
+                   </AlertDialogContent>
+                 </AlertDialog>
+               )}
             </div>
 
             <div className="flex gap-2">

@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCRUDAudit } from "@/hooks/useCRUDAudit";
-import { Card } from "@/components/ui/card";
+import { useColumnPreferences } from "@/hooks/useColumnPreferences";
 import { ContactTableBody } from "./contact-table/ContactTableBody";
 import { ContactModal } from "./ContactModal";
 import { ContactColumnCustomizer, ContactColumnConfig } from "./ContactColumnCustomizer";
 import { StandardPagination } from "./shared/StandardPagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { fetchPaginatedData } from "@/utils/supabasePagination";
 
 interface Contact {
   id: string;
@@ -23,6 +24,7 @@ interface Contact {
   contact_owner?: string;
   created_time?: string;
   modified_time?: string;
+  last_activity_time?: string;
   lead_status?: string;
   industry?: string;
   contact_source?: string;
@@ -37,7 +39,7 @@ interface Contact {
 
 const defaultColumns: ContactColumnConfig[] = [
   { field: 'contact_name', label: 'Contact Name', visible: true, order: 0 },
-  { field: 'company_name', label: 'Company Name', visible: true, order: 1 },
+  { field: 'company_name', label: 'Account', visible: true, order: 1 },
   { field: 'position', label: 'Position', visible: true, order: 2 },
   { field: 'email', label: 'Email', visible: true, order: 3 },
   { field: 'phone_no', label: 'Phone', visible: true, order: 4 },
@@ -45,6 +47,7 @@ const defaultColumns: ContactColumnConfig[] = [
   { field: 'contact_owner', label: 'Contact Owner', visible: true, order: 6 },
   { field: 'industry', label: 'Industry', visible: true, order: 7 },
   { field: 'contact_source', label: 'Source', visible: true, order: 8 },
+  { field: 'last_activity_time', label: 'Last Activity', visible: false, order: 9 },
 ];
 
 interface ContactTableProps {
@@ -72,38 +75,45 @@ export const ContactTable = ({
 }: ContactTableProps) => {
   const { toast } = useToast();
   const { logDelete } = useCRUDAudit();
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
+  const [pageContacts, setPageContacts] = useState<Contact[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [internalSearchTerm, setInternalSearchTerm] = useState("");
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<string | null>(null);
-  const [columns, setColumns] = useState(defaultColumns);
+  const { columns, setColumns } = useColumnPreferences<ContactColumnConfig>('contacts', defaultColumns);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  // Use external or internal search term
-  const effectiveSearchTerm = searchTerm !== undefined ? searchTerm : internalSearchTerm;
+  // Debounce search
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
 
-  const fetchContacts = async () => {
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchTerm]);
+
+  const fetchContacts = useCallback(async () => {
     try {
       setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('contacts')
-        .select('*')
-        .order('created_time', { ascending: false });
 
-      if (error) {
-        console.error('ContactTable: Supabase error:', error);
-        throw error;
-      }
-      
-      setContacts(data || []);
-      
+      const result = await fetchPaginatedData<Contact>('contacts', {
+        page: currentPage,
+        pageSize: itemsPerPage,
+        sortField: sortField || undefined,
+        sortDirection,
+        searchTerm: debouncedSearch || undefined,
+        searchFields: ['contact_name', 'company_name', 'email'],
+      });
+
+      setPageContacts(result.data);
+      setTotalCount(result.totalCount);
     } catch (error) {
       console.error('ContactTable: Error fetching contacts:', error);
       toast({
@@ -114,45 +124,17 @@ export const ContactTable = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage, sortField, sortDirection, debouncedSearch, toast]);
 
   useEffect(() => {
     fetchContacts();
-  }, []);
+  }, [fetchContacts]);
 
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0) {
       fetchContacts();
     }
-  }, [refreshTrigger]);
-
-  useEffect(() => {
-    let filtered = contacts.filter(contact =>
-      contact.contact_name?.toLowerCase().includes(effectiveSearchTerm.toLowerCase()) ||
-      contact.company_name?.toLowerCase().includes(effectiveSearchTerm.toLowerCase()) ||
-      contact.email?.toLowerCase().includes(effectiveSearchTerm.toLowerCase())
-    );
-
-    if (sortField) {
-      filtered.sort((a, b) => {
-        const aValue = a[sortField as keyof Contact] || '';
-        const bValue = b[sortField as keyof Contact] || '';
-        
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
-          return sortDirection === 'asc' ? comparison : -comparison;
-        }
-        
-        const aStr = String(aValue).toLowerCase();
-        const bStr = String(bValue).toLowerCase();
-        const comparison = aStr.localeCompare(bStr);
-        return sortDirection === 'asc' ? comparison : -comparison;
-      });
-    }
-
-    setFilteredContacts(filtered);
-    setCurrentPage(1);
-  }, [contacts, effectiveSearchTerm, sortField, sortDirection]);
+  }, [refreshTrigger, fetchContacts]);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -165,7 +147,7 @@ export const ContactTable = ({
 
   const handleDelete = async (id: string) => {
     try {
-      const contactToDelete = contacts.find(c => c.id === id);
+      const contact = pageContacts.find(c => c.id === id);
       
       const { error } = await supabase
         .from('contacts')
@@ -174,7 +156,7 @@ export const ContactTable = ({
 
       if (error) throw error;
 
-      await logDelete('contacts', id, contactToDelete);
+      await logDelete('contacts', id, contact);
 
       toast({
         title: "Success",
@@ -198,11 +180,9 @@ export const ContactTable = ({
   };
 
   const visibleColumns = columns.filter(col => col.visible);
-  const totalPages = Math.ceil(filteredContacts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const pageContacts = filteredContacts.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
-  if (loading) {
+  if (loading && pageContacts.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -213,38 +193,88 @@ export const ContactTable = ({
     );
   }
 
+  const handleConvertToLead = async (contact: Contact) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to convert contacts",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const leadData = {
+        lead_name: contact.contact_name,
+        company_name: contact.company_name,
+        position: contact.position,
+        email: contact.email,
+        phone_no: contact.phone_no,
+        country: contact.region,
+        industry: contact.industry,
+        contact_source: contact.contact_source,
+        lead_status: 'New',
+        created_by: user.id,
+      };
+      
+      const { error } = await supabase.from('leads').insert([leadData]);
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Contact converted to lead successfully",
+      });
+    } catch (error) {
+      console.error('Convert to lead error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to convert contact to lead",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddActionItem = (contact: Contact) => {
+    toast({
+      title: "Coming Soon",
+      description: `Action item creation for ${contact.contact_name} will be available soon.`,
+    });
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Table Content */}
-      <div className="flex-1 min-h-0 overflow-auto px-6 pt-4">
-        <Card>
-          <ContactTableBody
-            loading={loading}
-            pageContacts={pageContacts}
-            visibleColumns={visibleColumns}
-            selectedContacts={selectedContacts}
-            setSelectedContacts={setSelectedContacts}
-            onEdit={handleEditContact}
-            onDelete={(id) => {
-              setContactToDelete(id);
-              setShowDeleteDialog(true);
-            }}
-            searchTerm={effectiveSearchTerm}
-            onRefresh={fetchContacts}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onSort={handleSort}
-          />
-        </Card>
+      <div className="flex-1 min-h-0 overflow-auto">
+        <ContactTableBody
+          loading={loading}
+          pageContacts={pageContacts}
+          visibleColumns={visibleColumns}
+          selectedContacts={selectedContacts}
+          setSelectedContacts={setSelectedContacts}
+          onEdit={handleEditContact}
+          onDelete={(id) => {
+            setContactToDelete(id);
+            setShowDeleteDialog(true);
+          }}
+          searchTerm={searchTerm}
+          onRefresh={fetchContacts}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+          onConvertToLead={handleConvertToLead}
+          onAddActionItem={handleAddActionItem}
+        />
       </div>
 
       {/* Always show pagination */}
       <StandardPagination
         currentPage={currentPage}
         totalPages={totalPages}
-        totalItems={filteredContacts.length}
+        totalItems={totalCount}
         itemsPerPage={itemsPerPage}
         onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
         entityName="contacts"
       />
 

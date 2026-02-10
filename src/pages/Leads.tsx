@@ -75,6 +75,10 @@ const Leads = () => {
       <div className="flex-shrink-0 h-16 border-b bg-background px-6 flex items-center">
         <div className="flex items-center justify-between w-full">
           <h1 className="text-2xl font-semibold text-foreground">Leads</h1>
+          <Button onClick={() => setShowModal(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Lead
+          </Button>
         </div>
       </div>
 
@@ -82,7 +86,7 @@ const Leads = () => {
       <div className="flex-shrink-0 border-b bg-muted/30 px-6 py-3">
         <div className="flex flex-wrap items-center gap-3">
           {/* Search input */}
-          <div className="relative w-80">
+          <div className="relative flex-1 min-w-[200px] max-w-[300px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search leads..." 
@@ -144,20 +148,6 @@ const Leads = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Add button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={() => setShowModal(true)}>
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Add Lead</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
       </div>
 

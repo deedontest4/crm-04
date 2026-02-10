@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { AccountSearchableDropdown } from "./AccountSearchableDropdown";
 
 const contactSchema = z.object({
   contact_name: z.string().min(1, "Contact name is required"), // mandatory
@@ -241,9 +242,13 @@ export const ContactModal = ({ open, onOpenChange, contact, onSuccess }: Contact
                 name="company_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Company Name</FormLabel>
+                    <FormLabel>Account</FormLabel>
                     <FormControl>
-                      <Input placeholder="Company Name" {...field} />
+                      <AccountSearchableDropdown
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        placeholder="Select account..."
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

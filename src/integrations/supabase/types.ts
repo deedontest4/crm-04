@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          account_name: string
+          account_owner: string | null
+          company_type: string | null
+          country: string | null
+          created_by: string | null
+          created_time: string | null
+          currency: string | null
+          description: string | null
+          id: string
+          industry: string | null
+          last_activity_time: string | null
+          modified_by: string | null
+          modified_time: string | null
+          phone: string | null
+          region: string | null
+          status: string | null
+          tags: string[] | null
+          website: string | null
+        }
+        Insert: {
+          account_name: string
+          account_owner?: string | null
+          company_type?: string | null
+          country?: string | null
+          created_by?: string | null
+          created_time?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          industry?: string | null
+          last_activity_time?: string | null
+          modified_by?: string | null
+          modified_time?: string | null
+          phone?: string | null
+          region?: string | null
+          status?: string | null
+          tags?: string[] | null
+          website?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_owner?: string | null
+          company_type?: string | null
+          country?: string | null
+          created_by?: string | null
+          created_time?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          industry?: string | null
+          last_activity_time?: string | null
+          modified_by?: string | null
+          modified_time?: string | null
+          phone?: string | null
+          region?: string | null
+          status?: string | null
+          tags?: string[] | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       action_items: {
         Row: {
           archived_at: string | null
@@ -104,6 +167,7 @@ export type Database = {
           email: string | null
           id: string
           industry: string | null
+          last_activity_time: string | null
           linkedin: string | null
           modified_by: string | null
           modified_time: string | null
@@ -123,6 +187,7 @@ export type Database = {
           email?: string | null
           id?: string
           industry?: string | null
+          last_activity_time?: string | null
           linkedin?: string | null
           modified_by?: string | null
           modified_time?: string | null
@@ -142,6 +207,7 @@ export type Database = {
           email?: string | null
           id?: string
           industry?: string | null
+          last_activity_time?: string | null
           linkedin?: string | null
           modified_by?: string | null
           modified_time?: string | null
@@ -228,6 +294,7 @@ export type Database = {
       }
       deals: {
         Row: {
+          account_id: string | null
           action_items: string | null
           budget: string | null
           business_value: string | null
@@ -276,6 +343,7 @@ export type Database = {
           won_reason: string | null
         }
         Insert: {
+          account_id?: string | null
           action_items?: string | null
           budget?: string | null
           business_value?: string | null
@@ -324,6 +392,7 @@ export type Database = {
           won_reason?: string | null
         }
         Update: {
+          account_id?: string | null
           action_items?: string | null
           budget?: string | null
           business_value?: string | null
@@ -371,7 +440,15 @@ export type Database = {
           total_revenue?: number | null
           won_reason?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "deals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       keep_alive: {
         Row: {
@@ -432,6 +509,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          account_id: string | null
           company_name: string | null
           contact_owner: string | null
           contact_source: string | null
@@ -452,6 +530,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          account_id?: string | null
           company_name?: string | null
           contact_owner?: string | null
           contact_source?: string | null
@@ -472,6 +551,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          account_id?: string | null
           company_name?: string | null
           contact_owner?: string | null
           contact_source?: string | null
@@ -490,6 +570,71 @@ export type Database = {
           phone_no?: string | null
           position?: string | null
           website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          accounts_notifications: boolean | null
+          contacts_notifications: boolean | null
+          created_at: string | null
+          deal_updates: boolean | null
+          email_notifications: boolean | null
+          id: string
+          in_app_notifications: boolean | null
+          lead_assigned: boolean | null
+          leads_notifications: boolean | null
+          meeting_reminders: boolean | null
+          notification_frequency: string | null
+          push_notifications: boolean | null
+          task_reminders: boolean | null
+          updated_at: string | null
+          user_id: string
+          weekly_digest: boolean | null
+        }
+        Insert: {
+          accounts_notifications?: boolean | null
+          contacts_notifications?: boolean | null
+          created_at?: string | null
+          deal_updates?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          in_app_notifications?: boolean | null
+          lead_assigned?: boolean | null
+          leads_notifications?: boolean | null
+          meeting_reminders?: boolean | null
+          notification_frequency?: string | null
+          push_notifications?: boolean | null
+          task_reminders?: boolean | null
+          updated_at?: string | null
+          user_id: string
+          weekly_digest?: boolean | null
+        }
+        Update: {
+          accounts_notifications?: boolean | null
+          contacts_notifications?: boolean | null
+          created_at?: string | null
+          deal_updates?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          in_app_notifications?: boolean | null
+          lead_assigned?: boolean | null
+          leads_notifications?: boolean | null
+          meeting_reminders?: boolean | null
+          notification_frequency?: string | null
+          push_notifications?: boolean | null
+          task_reminders?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+          weekly_digest?: boolean | null
         }
         Relationships: []
       }
@@ -535,26 +680,71 @@ export type Database = {
         }
         Relationships: []
       }
+      page_permissions: {
+        Row: {
+          admin_access: boolean | null
+          created_at: string | null
+          description: string | null
+          id: string
+          manager_access: boolean | null
+          page_name: string
+          route: string
+          updated_at: string | null
+          user_access: boolean | null
+        }
+        Insert: {
+          admin_access?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_access?: boolean | null
+          page_name: string
+          route: string
+          updated_at?: string | null
+          user_access?: boolean | null
+        }
+        Update: {
+          admin_access?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_access?: boolean | null
+          page_name?: string
+          route?: string
+          updated_at?: string | null
+          user_access?: boolean | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           "Email ID": string | null
           full_name: string | null
           id: string
+          phone: string | null
+          timezone: string | null
           updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           "Email ID"?: string | null
           full_name?: string | null
           id: string
+          phone?: string | null
+          timezone?: string | null
           updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           "Email ID"?: string | null
           full_name?: string | null
           id?: string
+          phone?: string | null
+          timezone?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -628,22 +818,34 @@ export type Database = {
       user_preferences: {
         Row: {
           created_at: string | null
+          currency: string | null
+          date_format: string | null
+          default_module: string | null
           id: string
           theme: string | null
+          time_format: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
+          currency?: string | null
+          date_format?: string | null
+          default_module?: string | null
           id?: string
           theme?: string | null
+          time_format?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
+          currency?: string | null
+          date_format?: string | null
+          default_module?: string | null
           id?: string
           theme?: string | null
+          time_format?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -669,6 +871,39 @@ export type Database = {
           assigned_by?: string | null
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          created_at: string | null
+          device_info: Json | null
+          id: string
+          is_active: boolean | null
+          last_active_at: string | null
+          session_token: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_info?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_active_at?: string | null
+          session_token: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_info?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_active_at?: string | null
+          session_token?: string
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: []

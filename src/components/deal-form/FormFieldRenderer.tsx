@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Deal } from "@/types/deal";
 import { LeadSearchableDropdown } from "@/components/LeadSearchableDropdown";
+import { AccountSearchableDropdown } from "@/components/AccountSearchableDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { useUserDisplayNames } from "@/hooks/useUserDisplayNames";
@@ -56,7 +57,7 @@ export const FormFieldRenderer = ({ field, value, onChange, onLeadSelect, error 
   const getFieldLabel = (field: string) => {
     const labels: Record<string, string> = {
       project_name: 'Project Name',
-      customer_name: 'Customer Name',
+      customer_name: 'Account',
       lead_name: 'Lead Name',
       lead_owner: 'Lead Owner',
       region: 'Region',
@@ -261,6 +262,15 @@ export const FormFieldRenderer = ({ field, value, onChange, onLeadSelect, error 
             onValueChange={(val) => onChange(field, val)}
             onLeadSelect={handleLeadSelect}
             placeholder="Search and select a lead..."
+          />
+        );
+
+      case 'customer_name':
+        return (
+          <AccountSearchableDropdown
+            value={getStringValue(value)}
+            onValueChange={(val) => onChange(field, val)}
+            placeholder="Search and select an account..."
           />
         );
 

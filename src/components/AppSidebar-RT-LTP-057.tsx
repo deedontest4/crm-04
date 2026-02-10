@@ -70,8 +70,8 @@ export function AppSidebar({ isFixed = false, isOpen, onToggle }: AppSidebarProp
   };
 
   const handleThemeToggle = () => {
-    const newTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'auto' : 'light';
-    setTheme(newTheme);
+    const newTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    setTheme(newTheme as 'light' | 'dark' | 'system');
   };
 
   const getThemeIcon = () => {

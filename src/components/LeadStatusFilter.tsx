@@ -9,7 +9,7 @@ interface LeadStatusFilterProps {
 export const LeadStatusFilter = ({ value, onValueChange }: LeadStatusFilterProps) => {
   return (
     <Select value={value || "New"} onValueChange={onValueChange}>
-      <SelectTrigger className="w-40">
+      <SelectTrigger className="w-auto min-w-[100px] [&>svg]:hidden">
         <SelectValue placeholder="New" />
       </SelectTrigger>
       <SelectContent>

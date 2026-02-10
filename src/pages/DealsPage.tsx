@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRecords } from "@/utils/supabasePagination";
 import { useAuth } from "@/hooks/useAuth";
 import { Deal, DealStage } from "@/types/deal";
 import { KanbanBoard } from "@/components/KanbanBoard";
@@ -29,32 +30,18 @@ const DealsPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [initialStage, setInitialStage] = useState<DealStage>('Lead');
-  const [activeView, setActiveView] = useState<'kanban' | 'list'>('list');
+  const [activeView, setActiveView] = useState<'kanban' | 'list'>('kanban');
 
   const fetchDeals = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('deals')
-        .select('*')
-        .order('modified_at', { ascending: false });
-
-      if (error) {
-        console.error('Supabase error fetching deals:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch deals",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setDeals((data || []) as unknown as Deal[]);
+      const allDeals = await fetchAllRecords<Deal>('deals', 'modified_at', false);
+      setDeals(allDeals as unknown as Deal[]);
     } catch (error) {
-      console.error('Unexpected error fetching deals:', error);
+      console.error('Error fetching deals:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "Failed to fetch deals",
         variant: "destructive",
       });
     } finally {
@@ -430,6 +417,11 @@ const DealsPage = () => {
         onRefresh={fetchDeals}
         isCreating={isCreating}
         initialStage={initialStage}
+         onDelete={(dealId) => {
+           handleDeleteDeals([dealId]);
+           setIsFormOpen(false);
+           setSelectedDeal(null);
+         }}
       />
     </div>
   );

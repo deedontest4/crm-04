@@ -5,7 +5,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, CheckCircle } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useAllUsers } from '@/hooks/useUserDisplayNames';
@@ -442,13 +443,31 @@ export function ActionItemsTable({
 
                 {/* Actions */}
                 <TableCell onClick={e => e.stopPropagation()} className="py-2 px-2">
-                  <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(item)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDelete(item.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex justify-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEdit(item)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        {item.status !== 'Completed' && (
+                          <DropdownMenuItem onClick={() => onStatusChange(item.id, 'Completed')}>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Mark Complete
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onDelete(item.id)} className="text-destructive focus:text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </TableCell>
               </TableRow>;

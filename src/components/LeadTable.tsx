@@ -1,20 +1,23 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useCRUDAudit } from "@/hooks/useCRUDAudit";
 import { useUserDisplayNames } from "@/hooks/useUserDisplayNames";
-import { Card } from "@/components/ui/card";
+import { useColumnPreferences } from "@/hooks/useColumnPreferences";
+import { useLeadColumnWidths } from "@/hooks/useLeadColumnWidths";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, ListTodo } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, ListTodo } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { LeadModal } from "./LeadModal";
 import { LeadColumnCustomizer, LeadColumnConfig } from "./LeadColumnCustomizer";
 import { ConvertToDealModal } from "./ConvertToDealModal";
 import { LeadActionItemsModal } from "./LeadActionItemsModal";
 import { LeadDeleteConfirmDialog } from "./LeadDeleteConfirmDialog";
 import { StandardPagination } from "./shared/StandardPagination";
+import { fetchPaginatedData } from "@/utils/supabasePagination";
+import { cn } from "@/lib/utils";
 
 interface Lead {
   id: string;
@@ -39,7 +42,7 @@ interface Lead {
 
 const defaultColumns: LeadColumnConfig[] = [
   { field: 'lead_name', label: 'Lead Name', visible: true, order: 0 },
-  { field: 'company_name', label: 'Company Name', visible: true, order: 1 },
+  { field: 'company_name', label: 'Account', visible: true, order: 1 },
   { field: 'position', label: 'Position', visible: true, order: 2 },
   { field: 'email', label: 'Email', visible: true, order: 3 },
   { field: 'phone_no', label: 'Phone', visible: true, order: 4 },
@@ -81,17 +84,15 @@ const LeadTable = ({
 }: LeadTableProps) => {
   const { toast } = useToast();
   const { logDelete } = useCRUDAudit();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+  const [pageLeads, setPageLeads] = useState<Lead[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [internalSearchTerm, setInternalSearchTerm] = useState("");
-  const [internalStatusFilter, setInternalStatusFilter] = useState("New");
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
-  const [columns, setColumns] = useState(defaultColumns);
+  const { columns, setColumns } = useColumnPreferences<LeadColumnConfig>('leads', defaultColumns);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
   const [sortField, setSortField] = useState<string | null>(null);
@@ -99,19 +100,101 @@ const LeadTable = ({
   const [showActionItemsModal, setShowActionItemsModal] = useState(false);
   const [selectedLeadForActions, setSelectedLeadForActions] = useState<Lead | null>(null);
   const [highlightProcessed, setHighlightProcessed] = useState(false);
+  const { columnWidths, updateColumnWidth } = useLeadColumnWidths();
 
-  // Use external or internal values
-  const effectiveSearchTerm = searchTerm !== undefined ? searchTerm : internalSearchTerm;
-  const effectiveStatusFilter = statusFilter !== undefined ? statusFilter : internalStatusFilter;
+  // Column resize state
+  const [isResizing, setIsResizing] = useState<string | null>(null);
+  const [startX, setStartX] = useState(0);
+  const [startWidth, setStartWidth] = useState(0);
+
+  // Column resize handlers
+  const handleMouseDown = (e: React.MouseEvent, field: string) => {
+    setIsResizing(field);
+    setStartX(e.clientX);
+    setStartWidth(columnWidths[field] || 120);
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+    const deltaX = e.clientX - startX;
+    const newWidth = Math.max(60, startWidth + deltaX);
+    updateColumnWidth(isResizing, newWidth);
+  }, [isResizing, startX, startWidth, updateColumnWidth]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(null);
+  }, []);
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isResizing, handleMouseMove, handleMouseUp]);
+
+  // Debounce search
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchTerm]);
+
+  // Reset page when status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+
+  const fetchLeads = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const filters: Record<string, string> = {};
+      if (statusFilter && statusFilter !== 'all') {
+        filters.lead_status = statusFilter;
+      }
+
+      const result = await fetchPaginatedData<Lead>('leads', {
+        page: currentPage,
+        pageSize: itemsPerPage,
+        sortField: sortField || undefined,
+        sortDirection,
+        searchTerm: debouncedSearch || undefined,
+        searchFields: ['lead_name', 'company_name', 'email'],
+        filters,
+      });
+
+      setPageLeads(result.data);
+      setTotalCount(result.totalCount);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch leads",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, itemsPerPage, sortField, sortDirection, debouncedSearch, statusFilter, toast]);
 
   useEffect(() => {
     fetchLeads();
-  }, []);
+  }, [fetchLeads]);
 
   // Handle highlight from notification click
   useEffect(() => {
-    if (highlightId && leads.length > 0 && !loading && !highlightProcessed) {
-      const lead = leads.find(l => l.id === highlightId);
+    if (highlightId && pageLeads.length > 0 && !loading && !highlightProcessed) {
+      const lead = pageLeads.find(l => l.id === highlightId);
       if (lead) {
         setEditingLead(lead);
         setShowModal(true);
@@ -124,37 +207,13 @@ const LeadTable = ({
       clearHighlight?.();
       setHighlightProcessed(true);
     }
-  }, [highlightId, leads, loading, highlightProcessed, clearHighlight, setShowModal, toast]);
+  }, [highlightId, pageLeads, loading, highlightProcessed, clearHighlight, setShowModal, toast]);
 
-  // Reset processed state when highlightId changes
   useEffect(() => {
     if (highlightId) {
       setHighlightProcessed(false);
     }
   }, [highlightId]);
-
-  useEffect(() => {
-    let filtered = leads.filter(lead => 
-      lead.lead_name?.toLowerCase().includes(effectiveSearchTerm.toLowerCase()) || 
-      lead.company_name?.toLowerCase().includes(effectiveSearchTerm.toLowerCase()) || 
-      lead.email?.toLowerCase().includes(effectiveSearchTerm.toLowerCase())
-    );
-    
-    if (effectiveStatusFilter !== "all") {
-      filtered = filtered.filter(lead => lead.lead_status === effectiveStatusFilter);
-    }
-
-    if (sortField) {
-      filtered.sort((a, b) => {
-        const aValue = a[sortField as keyof Lead] || '';
-        const bValue = b[sortField as keyof Lead] || '';
-        const comparison = aValue.toString().localeCompare(bValue.toString());
-        return sortDirection === 'asc' ? comparison : -comparison;
-      });
-    }
-    setFilteredLeads(filtered);
-    setCurrentPage(1);
-  }, [leads, effectiveSearchTerm, effectiveStatusFilter, sortField, sortDirection]);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -167,28 +226,11 @@ const LeadTable = ({
 
   const getSortIcon = (field: string) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="w-3 h-3 text-muted-foreground/40" />;
+      return <ArrowUpDown className="w-3 h-3 text-muted-foreground/60" />;
     }
     return sortDirection === 'asc' 
       ? <ArrowUp className="w-3 h-3 text-foreground" /> 
       : <ArrowDown className="w-3 h-3 text-foreground" />;
-  };
-
-  const fetchLeads = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.from('leads').select('*').order('created_time', { ascending: false });
-      if (error) throw error;
-      setLeads(data || []);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch leads",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleDelete = async (deleteLinkedRecords: boolean = true) => {
@@ -234,7 +276,6 @@ const LeadTable = ({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const pageLeads = getCurrentPageLeads().slice(0, 50);
       setSelectedLeads(pageLeads.map(l => l.id));
     } else {
       setSelectedLeads([]);
@@ -249,20 +290,14 @@ const LeadTable = ({
     }
   };
 
-  const getCurrentPageLeads = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredLeads.slice(startIndex, startIndex + itemsPerPage);
-  };
-
-  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   const createdByIds = useMemo(() => {
-    return [...new Set(leads.map(l => l.created_by).filter(Boolean))];
-  }, [leads]);
+    return [...new Set(pageLeads.map(l => l.created_by).filter(Boolean))];
+  }, [pageLeads]);
 
   const { displayNames } = useUserDisplayNames(createdByIds);
   const visibleColumns = columns.filter(col => col.visible);
-  const pageLeads = getCurrentPageLeads();
 
   const handleConvertToDeal = (lead: Lead) => {
     setLeadToConvert(lead);
@@ -274,7 +309,7 @@ const LeadTable = ({
       try {
         const { error } = await supabase.from('leads').update({ lead_status: 'Converted' }).eq('id', leadToConvert.id);
         if (!error) {
-          setLeads(prevLeads => prevLeads.map(lead => 
+          setPageLeads(prevLeads => prevLeads.map(lead => 
             lead.id === leadToConvert.id ? { ...lead, lead_status: 'Converted' } : lead
           ));
         }
@@ -291,147 +326,156 @@ const LeadTable = ({
     setShowActionItemsModal(true);
   };
 
+  const getLeadStatusDotColor = (status: string | undefined) => {
+    switch (status) {
+      case 'New': return 'bg-blue-500';
+      case 'Contacted': return 'bg-yellow-500';
+      case 'Converted': return 'bg-green-500';
+      default: return 'bg-gray-400';
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Table Content */}
-      <div className="flex-1 min-h-0 overflow-auto px-6 pt-4">
-        <Card>
-          <div className="overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 z-10">
-                <TableRow className="bg-muted/50 hover:bg-muted/60 border-b-2">
-                  <TableHead className="w-12 text-center font-bold text-foreground bg-muted/50">
-                    <div className="flex justify-center">
-                      <Checkbox 
-                        checked={selectedLeads.length > 0 && selectedLeads.length === Math.min(pageLeads.length, 50)} 
-                        onCheckedChange={handleSelectAll} 
-                      />
+      <div className="flex-1 min-h-0 overflow-auto">
+        <div className={cn("overflow-auto", isResizing && "select-none")}>
+          <Table>
+            <TableHeader className="sticky top-0 z-10">
+              <TableRow className="bg-muted/50 hover:bg-muted/60 border-b-2">
+                <TableHead className="w-12 text-center font-bold text-foreground bg-muted/50 py-3">
+                  <div className="flex justify-center">
+                    <Checkbox 
+                      checked={selectedLeads.length > 0 && selectedLeads.length === pageLeads.length} 
+                      onCheckedChange={handleSelectAll} 
+                    />
+                  </div>
+                </TableHead>
+                {visibleColumns.map(column => (
+                  <TableHead 
+                    key={column.field} 
+                    className={cn(
+                      "relative text-left font-bold text-foreground bg-muted/50 px-4 py-3 whitespace-nowrap",
+                      sortField === column.field && "bg-accent"
+                    )}
+                    style={{ width: `${columnWidths[column.field] || 120}px`, minWidth: column.field === 'lead_name' ? '150px' : '60px' }}
+                  >
+                    <div 
+                      className="flex items-center gap-2 cursor-pointer hover:text-primary" 
+                      onClick={() => handleSort(column.field)}
+                    >
+                      {column.label}
+                      {getSortIcon(column.field)}
                     </div>
+                    {/* Resize handle */}
+                    <div 
+                      className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/40 active:bg-primary/60" 
+                      onMouseDown={e => handleMouseDown(e, column.field)} 
+                    />
                   </TableHead>
-                  {visibleColumns.map(column => (
-                    <TableHead key={column.field} className="text-left font-bold text-foreground bg-muted/50 px-4 py-3 whitespace-nowrap">
-                      <div 
-                        className="flex items-center gap-2 cursor-pointer hover:text-primary" 
-                        onClick={() => handleSort(column.field)}
-                      >
-                        {column.label}
-                        {getSortIcon(column.field)}
-                      </div>
-                    </TableHead>
-                  ))}
-                  <TableHead className="text-center font-bold text-foreground bg-muted/50 w-48 px-4 py-3">
-                    Actions
-                  </TableHead>
+                ))}
+                <TableHead className="w-20 bg-muted/50 py-3"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && pageLeads.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={visibleColumns.length + 2} className="text-center py-8">
+                    Loading leads...
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={visibleColumns.length + 2} className="text-center py-8">
-                      Loading leads...
+              ) : pageLeads.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={visibleColumns.length + 2} className="text-center py-8">
+                    No leads found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                pageLeads.map(lead => (
+                  <TableRow key={lead.id} className="group hover:bg-muted/30 border-b">
+                    <TableCell className="text-center px-4 py-3">
+                      <div className="flex justify-center">
+                        <Checkbox 
+                          checked={selectedLeads.includes(lead.id)} 
+                          onCheckedChange={checked => handleSelectLead(lead.id, checked as boolean)} 
+                        />
+                      </div>
                     </TableCell>
-                  </TableRow>
-                ) : pageLeads.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={visibleColumns.length + 2} className="text-center py-8">
-                      No leads found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  pageLeads.map(lead => (
-                    <TableRow key={lead.id} className="hover:bg-muted/20 border-b">
-                      <TableCell className="text-center px-4 py-3">
-                        <div className="flex justify-center">
-                          <Checkbox 
-                            checked={selectedLeads.includes(lead.id)} 
-                            onCheckedChange={checked => handleSelectLead(lead.id, checked as boolean)} 
-                          />
-                        </div>
-                      </TableCell>
-                      {visibleColumns.map(column => (
-                        <TableCell key={column.field} className="text-left px-4 py-3 align-middle whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
-                          {column.field === 'lead_name' ? (
-                            <button 
-                              onClick={() => { setEditingLead(lead); setShowModal(true); }} 
-                              className="text-primary hover:underline font-medium text-left truncate block w-full"
-                            >
-                              {lead[column.field as keyof Lead] || '-'}
-                            </button>
-                          ) : column.field === 'contact_owner' ? (
-                            <span className="truncate block">
-                              {lead.created_by ? displayNames[lead.created_by] || "Loading..." : '-'}
-                            </span>
-                          ) : column.field === 'lead_status' && lead.lead_status ? (
-                            <Badge 
-                              variant={lead.lead_status === 'New' ? 'secondary' : lead.lead_status === 'Contacted' ? 'default' : 'outline'}
-                              className="whitespace-nowrap"
-                            >
-                              {lead.lead_status}
-                            </Badge>
-                          ) : (
-                            <span className="truncate block" title={lead[column.field as keyof Lead]?.toString() || '-'}>
-                              {lead[column.field as keyof Lead] || '-'}
-                            </span>
-                          )}
-                        </TableCell>
-                      ))}
-                      <TableCell className="w-48 px-4 py-3">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                    {visibleColumns.map(column => (
+                      <TableCell 
+                        key={column.field} 
+                        className="text-left px-4 py-3 align-middle whitespace-nowrap overflow-hidden text-ellipsis"
+                        style={{ width: `${columnWidths[column.field] || 120}px`, maxWidth: `${columnWidths[column.field] || 200}px` }}
+                      >
+                        {column.field === 'lead_name' ? (
+                          <button 
                             onClick={() => { setEditingLead(lead); setShowModal(true); }} 
-                            title="Edit lead" 
-                            className="h-8 w-8 p-0"
+                            className="text-[#2e538e] hover:underline font-normal text-left truncate block w-full"
                           >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => { setLeadToDelete(lead); setShowDeleteDialog(true); }} 
-                            title="Delete lead" 
-                            className="h-8 w-8 p-0"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleConvertToDeal(lead)} 
-                            disabled={lead.lead_status === 'Converted'} 
-                            title="Convert to deal" 
-                            className="h-8 w-8 p-0"
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleActionItems(lead)} 
-                            title="Action items" 
-                            className="h-8 w-8 p-0"
-                          >
-                            <ListTodo className="w-4 h-4" />
-                          </Button>
-                        </div>
+                            {lead[column.field as keyof Lead] || '-'}
+                          </button>
+                        ) : column.field === 'contact_owner' ? (
+                          <span className="truncate block">
+                            {lead.created_by ? displayNames[lead.created_by] || "Loading..." : '-'}
+                          </span>
+                        ) : column.field === 'lead_status' && lead.lead_status ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn('w-2 h-2 rounded-full flex-shrink-0', getLeadStatusDotColor(lead.lead_status))} />
+                            <span>{lead.lead_status}</span>
+                          </div>
+                        ) : (
+                          <span className="truncate block" title={lead[column.field as keyof Lead]?.toString() || '-'}>
+                            {lead[column.field as keyof Lead] || '-'}
+                          </span>
+                        )}
                       </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
+                    ))}
+                    <TableCell className="py-3 px-2">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex justify-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => { setEditingLead(lead); setShowModal(true); }}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setLeadToConvert(lead); setShowConvertModal(true); }}>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Convert to Deal
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setSelectedLeadForActions(lead); setShowActionItemsModal(true); }}>
+                              <ListTodo className="h-4 w-4 mr-2" />
+                              Action Items
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => { setLeadToDelete(lead); setShowDeleteDialog(true); }} className="text-destructive focus:text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Always show pagination */}
       <StandardPagination
         currentPage={currentPage}
         totalPages={totalPages}
-        totalItems={filteredLeads.length}
+        totalItems={totalCount}
         itemsPerPage={itemsPerPage}
         onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
         entityName="leads"
       />
 
@@ -457,17 +501,17 @@ const LeadTable = ({
         onSuccess={handleConvertSuccess} 
       />
 
+      <LeadDeleteConfirmDialog
+        open={showDeleteDialog}
+        onCancel={() => { setShowDeleteDialog(false); setLeadToDelete(null); }}
+        leadName={leadToDelete?.lead_name || ''}
+        onConfirm={handleDelete}
+      />
+
       <LeadActionItemsModal 
         open={showActionItemsModal} 
         onOpenChange={setShowActionItemsModal} 
         lead={selectedLeadForActions} 
-      />
-
-      <LeadDeleteConfirmDialog 
-        open={showDeleteDialog} 
-        onConfirm={handleDelete} 
-        onCancel={() => { setShowDeleteDialog(false); setLeadToDelete(null); }} 
-        isMultiple={false} 
       />
     </div>
   );

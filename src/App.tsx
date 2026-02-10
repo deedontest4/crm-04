@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import SecurityEnhancedApp from "@/components/SecurityEnhancedApp";
 import { AppSidebar } from "@/components/AppSidebar";
 import Dashboard from "./pages/Dashboard";
+import Accounts from "./pages/Accounts";
 import Contacts from "./pages/Contacts";
 import Leads from "./pages/Leads";
 import DealsPage from "./pages/DealsPage";
@@ -26,7 +27,7 @@ const FixedSidebarLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   
   // These routes need overflow-hidden so they can control their own scrolling
-  const controlledScrollRoutes = ['/action-items', '/leads', '/contacts', '/deals', '/settings', '/notifications', '/'];
+  const controlledScrollRoutes = ['/action-items', '/leads', '/contacts', '/deals', '/settings', '/notifications', '/', '/accounts'];
   const needsControlledScroll = controlledScrollRoutes.includes(location.pathname);
   
   return (
@@ -111,6 +112,11 @@ const AppRouter = () => (
       <Route path="/" element={
         <ProtectedRoute>
           <Dashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts" element={
+        <ProtectedRoute>
+          <Accounts />
         </ProtectedRoute>
       } />
       <Route path="/contacts" element={

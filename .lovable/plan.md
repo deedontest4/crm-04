@@ -1,79 +1,122 @@
 
 
-## Plan: Make Horizontal Scrollbar Always Visible While Scrolling
+## Plan: Replace "Company Name" with "Account" Dropdown in Leads + Deals Modules
 
-Based on the screenshots and your answers, the issue is that the horizontal scrollbar only appears when you scroll all the way to the bottom. You want it **always visible (pinned at the bottom)** while you scroll vertically through rows, but only when there is actual horizontal overflow.
+### Overview
 
-### Root Cause
+Replace the plain text "Company Name" field in Leads and "Customer Name" field in Deals with a proper Account relationship using searchable dropdowns. Migrate all existing data by creating new Account records (without duplicates) and linking them to existing Leads and Deals.
 
-The current implementation uses a single `div` wrapper with `overflow-auto` around the `Table`. This causes the horizontal scrollbar to appear at the very bottom of the **scrollable content** rather than at the bottom of the **visible viewport**.
+### Data Analysis
 
-When you have many rows, you must scroll to the last row before the horizontal scrollbar becomes visible.
+**Deals module** has 33 unique `customer_name` values across ~47 deals. Of these:
+- 2 already match existing accounts exactly: **BMW**, **CARIAD**
+- Several have near-matches (e.g., "REFU Drive" / "ReFu Drive" / "REFU  Drive" should all map to "REFU Drive HQ, Germany")
+- ~25 need new Account records created
 
-### Solution
+**Leads module** has 15 unique `company_name` values. Some overlap with deals (Hanon, Lamborgini, Marelli, Volvo AB, LG Virtualization).
 
-Split the scroll containers:
-- Outer container handles **vertical scrolling** only (`overflow-y-auto`)
-- Inner container with `position: sticky` at the bottom handles **horizontal scrolling** for the scrollbar track
+**Deduplication mapping** (customer_name/company_name -> existing account to link):
+| Text in Leads/Deals | Existing Account Match |
+|---|---|
+| BMW | BMW |
+| CARIAD, CARIAD US | CARIAD |
+| REFU Drive, ReFu Drive, REFU  Drive | REFU Drive HQ, Germany |
+| Continental | Continental HQ, Germany |
+| Harley Davidson | Harley-Davidson Motor Company, HQ, US |
+| Porsche | Porsche, HQ, Germany |
+| Mercedes Benz India | Mercedes-Benz Group AG, HQ, Germany |
+| Stellantis | Stellantis, HQ, Netherlands |
+| Marelli | Marelli HQ, Italy |
+| Volvo AB | (no exact match - create new) |
+| Volvo Cars | Volvo Car Corporation |
+| All others | Create new Account records |
 
-However, a simpler CSS approach exists using `overflow: scroll` combined with `scrollbar-gutter: stable` and making the scrollbar always visible via CSS `overflow-x: scroll` on a sticky bottom element.
+### Database Changes
 
-The cleanest approach is to use a **fixed-position horizontal scrollbar** that syncs with the table scroll position using JavaScript.
+**Migration 1: Add `account_id` columns**
+- `ALTER TABLE leads ADD COLUMN account_id UUID REFERENCES accounts(id)`
+- `ALTER TABLE deals ADD COLUMN account_id UUID REFERENCES accounts(id)`
 
-### Technical Approach
+**Migration 2: Create missing Account records and backfill**
+- Collect all unique names from `leads.company_name` and `deals.customer_name`
+- For names matching existing accounts (exact or near-match), link directly
+- For unmatched names, INSERT new Account records
+- UPDATE all leads and deals to set `account_id`
+- Keep `company_name` and `customer_name` columns intact (no data loss)
 
-Use the `overflow-x: scroll` property with `overflow-y: auto` on a wrapper, but restructure the layout so the horizontal scrollbar container is **sticky at the bottom** of the visible area.
+### UI Changes
 
-Implementation:
-1. Create a separate sticky bottom div that shows the horizontal scrollbar
-2. Sync the scroll position between the table and the scrollbar using JavaScript refs
-3. The scrollbar element will be `position: sticky; bottom: 0` to always stay visible
+**1. `src/components/LeadModal.tsx`**
+- Replace text `Input` for "Company Name" with `AccountSearchableDropdown`
+- Change label from "Company Name" to "Account"
+- On select: set `company_name = selected account_name` (backward compat) and store `account_id`
 
-### Changes
+**2. `src/components/LeadTable.tsx`**
+- Rename column label from "Company Name" to "Account"
+- Add clickable account name that opens `AccountViewModal`
 
-**File: `src/components/ListView.tsx`**
+**3. `src/components/deal-form/FormFieldRenderer.tsx`**
+- Change `customer_name` label from "Customer Name" to "Account"
+- Replace the default text Input with `AccountSearchableDropdown` for `customer_name` field
+- Update `handleLeadSelect` to pass `account_id` when auto-filling from lead
 
-1. **Add scrollbar sync refs** (lines 62-66)
-   - Add `scrollContainerRef` and `scrollbarRef` useRefs
-   - Add state to track if horizontal scroll is needed
+**4. `src/components/deal-form/LeadStageForm.tsx`**
+- Update the `customer_name` field rendering to use the new dropdown
 
-2. **Add scroll sync logic** (new useEffect)
-   - Use ResizeObserver to detect when content is wider than container
-   - Sync scroll positions between table and bottom scrollbar
+**5. `src/components/DealCard.tsx` / `src/components/kanban/InlineDetailsPanel.tsx`**
+- Update display label from "Customer" to "Account" where `customer_name` is shown
 
-3. **Update content area structure** (lines 394-527)
-   - Keep the main table in a container with `overflow-y: auto overflow-x: hidden`
-   - Add a sticky bottom scrollbar that mirrors the table width
-   - This scrollbar stays visible at the bottom of the viewport while scrolling vertically
+**6. Import/Export files**
+- `src/hooks/import-export/leadsCSVProcessor.ts` - support `account_name` header mapping
+- `src/hooks/import-export/dealsCSVProcessor.ts` - support `account_name` header mapping
 
-4. **Add CSS for the synced scrollbar**
-   - Style the scrollbar track to match the design system
+### Technical Details
 
-### Visual Representation
+**Migration SQL (executed in order):**
 
-```text
-+------------------------------------------+
-|  Filter Bar (fixed)                      |
-+------------------------------------------+
-|  Table Content Area                      |
-|  +--------------------------------------+|
-|  | Header (sticky top)                  ||
-|  +--------------------------------------+|
-|  | Row 1                                ||
-|  | Row 2                                ||
-|  | Row 3                                ||
-|  | ...                                  ||
-|  +--------------------------------------+|
-|  | Horizontal Scrollbar (sticky bottom)||  <-- Always visible
-|  +--------------------------------------+|
-+------------------------------------------+
-|  Pagination Footer (fixed)               |
-+------------------------------------------+
+Step 1 - Schema:
+```sql
+ALTER TABLE leads ADD COLUMN account_id UUID REFERENCES accounts(id);
+ALTER TABLE deals ADD COLUMN account_id UUID REFERENCES accounts(id);
 ```
+
+Step 2 - Create accounts for unmatched names and backfill:
+The migration will use a DO block to:
+1. Build a mapping of customer_name/company_name to existing account IDs
+2. For unmatched names, INSERT INTO accounts with just the name
+3. UPDATE leads SET account_id = matched_account_id
+4. UPDATE deals SET account_id = matched_account_id
+
+**Near-match handling in migration:**
+- "REFU Drive", "ReFu Drive", "REFU  Drive" all map to existing "REFU Drive HQ, Germany" (id: 2b3ecebd)
+- "Harley Davidson" maps to "Harley-Davidson Motor Company, HQ, US"
+- "Continental" maps to "Continental HQ, Germany"
+- "Porsche" maps to "Porsche, HQ, Germany"
+- "Stellantis" maps to "Stellantis, HQ, Netherlands"
+- "Marelli" maps to "Marelli HQ, Italy"
+- "Volvo Cars" maps to "Volvo Car Corporation"
+- "Mercedes Benz India" maps to "Mercedes-Benz Group AG, HQ, Germany"
+- New accounts created for: Accenture, Aumovio, BMW - Accenture, BMW Tech Works, BMW/Acsia, CARIAD US, ClearMotion, Coretura, Eberspacher, Hanon, Kiekert, Lamborgini, LG - tQCS, LG Virtualization, LSAT, Siemens / Volvo Trucks, TATA Elxsi, Thyssen Krupp, TKE, Volvo AB, VW, Antolin, Aptiv, BHTC, BMW Tech Center India, Daichi, Kostal, Preh, Scania / MAN, Test, Vestel
+
+**Backward compatibility:**
+- `company_name` (leads) and `customer_name` (deals) columns are preserved
+- When user selects an Account from dropdown, both the text field and `account_id` are set
+- Existing queries, filters, and search continue to work on text fields
 
 ### Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/components/ListView.tsx` | Add sticky horizontal scrollbar with scroll sync logic |
+| File | Change |
+|------|--------|
+| New migration | Add `account_id` to leads and deals, create accounts, backfill |
+| `src/components/LeadModal.tsx` | Replace text input with AccountSearchableDropdown |
+| `src/components/LeadTable.tsx` | Rename column to "Account", add clickable link |
+| `src/components/deal-form/FormFieldRenderer.tsx` | Add AccountSearchableDropdown for customer_name |
+| `src/integrations/supabase/types.ts` | Auto-updates with new columns |
+| `src/types/deal.ts` | Add `account_id` field |
+
+### Zero Data Loss Guarantee
+- No columns are dropped or renamed
+- Existing text values remain intact in `company_name` and `customer_name`
+- New `account_id` column is nullable -- existing code continues to work
+- All existing customer/company names get linked to Account records (existing or newly created)
 

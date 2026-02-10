@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { AccountSearchableDropdown } from "@/components/AccountSearchableDropdown";
 
 const leadSchema = z.object({
   lead_name: z.string().min(1, "Lead name is required"),
@@ -259,9 +260,13 @@ export const LeadModal = ({ open, onOpenChange, lead, onSuccess }: LeadModalProp
                 name="company_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Company Name</FormLabel>
+                    <FormLabel>Account</FormLabel>
                     <FormControl>
-                      <Input placeholder="Company Name" {...field} />
+                      <AccountSearchableDropdown
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        placeholder="Select account..."
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -1,25 +1,43 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
+type Theme = 'light' | 'dark' | 'system';
+
 export const useThemePreferences = () => {
-  const [theme, setThemeState] = useState(() => {
-    // Get initial theme from localStorage as fallback, default to light if auto was set
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'auto' ? 'light' : (savedTheme || 'light');
+  const [theme, setThemeState] = useState<Theme>(() => {
+    // Get initial theme from localStorage as fallback
+    const savedTheme = localStorage.getItem('theme') as Theme | null;
+    return savedTheme || 'light';
   });
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
 
   // Apply theme to DOM
-  const applyTheme = (newTheme: string) => {
+  const applyTheme = (newTheme: Theme) => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
-    root.classList.add(newTheme);
+    
+    if (newTheme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      root.classList.add(systemTheme);
+    } else {
+      root.classList.add(newTheme);
+    }
   };
+
+  // Listen for system theme changes when in 'system' mode
+  useEffect(() => {
+    if (theme !== 'system') return;
+    
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => applyTheme('system');
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme]);
 
   // Load user preferences from database
   const loadUserPreferences = async () => {
@@ -39,22 +57,14 @@ export const useThemePreferences = () => {
         throw error;
       }
 
-      let userTheme = data?.theme || 'light';
-      // Convert auto to light for backwards compatibility
-      if (userTheme === 'auto') {
-        userTheme = 'light';
-      }
-      
+      const userTheme = (data?.theme as Theme) || 'light';
       setThemeState(userTheme);
       localStorage.setItem('theme', userTheme);
       applyTheme(userTheme);
     } catch (error) {
       console.error('Error loading theme preferences:', error);
       // Fallback to localStorage or default
-      let fallbackTheme = localStorage.getItem('theme') || 'light';
-      if (fallbackTheme === 'auto') {
-        fallbackTheme = 'light';
-      }
+      const fallbackTheme = (localStorage.getItem('theme') as Theme) || 'light';
       setThemeState(fallbackTheme);
       applyTheme(fallbackTheme);
     } finally {
@@ -63,7 +73,7 @@ export const useThemePreferences = () => {
   };
 
   // Save theme preference to database
-  const saveThemePreference = async (newTheme: string) => {
+  const saveThemePreference = async (newTheme: Theme) => {
     if (!user) {
       // If not logged in, just save to localStorage
       localStorage.setItem('theme', newTheme);

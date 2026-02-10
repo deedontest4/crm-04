@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Deal, DealStage, DEAL_STAGES, STAGE_COLORS } from "@/types/deal";
-import { Search, Filter, X, Edit, Trash2, ArrowUp, ArrowDown, ArrowUpDown, CheckSquare, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, X, Pencil, Trash2, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, MoreHorizontal, ListTodo } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { InlineEditCell } from "./InlineEditCell";
 import { DealColumnCustomizer, DealColumnConfig } from "./DealColumnCustomizer";
@@ -54,6 +55,10 @@ export const ListView = ({
 
   // Column customizer state
   const [columnCustomizerOpen, setColumnCustomizerOpen] = useState(false);
+  
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [dealToDelete, setDealToDelete] = useState<string | null>(null);
 
   // Column width and visibility preferences from database
   const { columnWidths, columns, saveColumnWidths, saveColumns } = useDealsColumnPreferences();
@@ -438,7 +443,7 @@ export const ListView = ({
                   />
                 </TableHead>
               ))}
-              <TableHead className="w-32 min-w-32 bg-muted/80 text-sm font-semibold text-foreground py-3 px-3 h-11">Actions</TableHead>
+              <TableHead className="w-20 min-w-20 bg-muted/80 py-3 px-3 h-11"></TableHead>
               </TableRow>
             </TableHeader>
           <TableBody>
@@ -452,7 +457,7 @@ export const ListView = ({
               paginatedDeals.map((deal) => (
                 <TableRow 
                   key={deal.id} 
-                  className={`hover:bg-muted/50 transition-all ${
+                  className={`group hover:bg-muted/50 transition-all ${
                     selectedDeals.has(deal.id) ? 'bg-primary/5' : ''
                   }`}
                 >
@@ -482,41 +487,36 @@ export const ListView = ({
                       />
                     </TableCell>
                   ))}
-                  <TableCell className="py-2 px-3">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleActionClick(deal)}
-                        className="h-8 w-8 p-0"
-                        title="Actions"
-                      >
-                        <CheckSquare className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onDealClick(deal)}
-                        className="h-8 w-8 p-0"
-                        title="Edit"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          onDeleteDeals([deal.id]);
-                          toast({
-                            title: "Deal deleted",
-                            description: `Successfully deleted ${deal.project_name || 'deal'}`,
-                          });
-                        }}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                  <TableCell className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex justify-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onDealClick(deal)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleActionClick(deal)}>
+                            <ListTodo className="h-4 w-4 mr-2" />
+                            Action Items
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setDealToDelete(deal.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -586,6 +586,37 @@ export const ListView = ({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Deal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this deal? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (dealToDelete) {
+                  onDeleteDeals([dealToDelete]);
+                  toast({
+                    title: "Deal deleted",
+                    description: "Deal has been successfully deleted",
+                  });
+                }
+                setDealToDelete(null);
+                setDeleteDialogOpen(false);
+              }} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <DealActionItemsModal
         open={actionModalOpen}

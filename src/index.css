@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
 
@@ -48,23 +48,23 @@ All colors MUST be HSL.
 
     --radius: 0rem;
 
-    /* Stage Colors */
-    --stage-lead: 239 84% 85%;
-    --stage-lead-foreground: 239 84% 25%;
-    --stage-discussions: 180 84% 85%;
-    --stage-discussions-foreground: 180 84% 25%;
-    --stage-qualified: 188 95% 85%;
-    --stage-qualified-foreground: 188 95% 25%;
-    --stage-rfq: 204 30% 85%;
-    --stage-rfq-foreground: 204 30% 25%;
-    --stage-offered: 25 95% 85%;
-    --stage-offered-foreground: 25 95% 25%;
-    --stage-won: 142 71% 85%;
-    --stage-won-foreground: 142 71% 25%;
-    --stage-lost: 0 84% 85%;
-    --stage-lost-foreground: 0 84% 25%;
-    --stage-dropped: 0 0% 85%;
-    --stage-dropped-foreground: 0 0% 25%;
+    /* Stage Colors - Vibrant, Professional Palette */
+    --stage-lead: 239 45% 85%;
+    --stage-lead-foreground: 239 55% 30%;
+    --stage-discussions: 180 50% 82%;
+    --stage-discussions-foreground: 180 55% 25%;
+    --stage-qualified: 188 55% 80%;
+    --stage-qualified-foreground: 188 60% 25%;
+    --stage-rfq: 204 35% 85%;
+    --stage-rfq-foreground: 204 40% 30%;
+    --stage-offered: 30 55% 82%;
+    --stage-offered-foreground: 30 65% 25%;
+    --stage-won: 142 50% 78%;
+    --stage-won-foreground: 142 60% 22%;
+    --stage-lost: 0 50% 88%;
+    --stage-lost-foreground: 0 60% 30%;
+    --stage-dropped: 0 0% 82%;
+    --stage-dropped-foreground: 0 0% 30%;
 
     /* Light Blue Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(204 94% 50%), hsl(204 94% 55%));
@@ -147,7 +147,21 @@ All colors MUST be HSL.
     --sidebar-accent: 215 20% 65%; /* #334155 - slate-700 */
     --sidebar-accent-foreground: 228 84% 4%; /* #f8fafc - slate-50 */
     --sidebar-border: 215 19% 34%; /* Match --border for dark theme */
-    --sidebar-ring: 212 26% 83%; /* #3b82f6 - blue-500 */ --chart-1: 215 12% 83%; --chart-2: 212 26% 83%; --chart-3: 215 20% 65%; --chart-4: 217 10% 64%; --chart-5: 215 16% 46%; --sidebar: 217 32% 17%; --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05); --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05); --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1); --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1); --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1); --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1); --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1); --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --sidebar-ring: 212 26% 83%;
+    --chart-1: 215 12% 83%;
+    --chart-2: 212 26% 83%;
+    --chart-3: 215 20% 65%;
+    --chart-4: 217 10% 64%;
+    --chart-5: 215 16% 46%;
+    --sidebar: 217 32% 17%;
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   }
 }
 
@@ -239,4 +253,248 @@ All colors MUST be HSL.
   .hover-light-blue {
     @apply hover:bg-primary/5 hover:border-primary/20 transition-all duration-200;
   }
+
+  /* Collapsible animations */
+  .collapsible-content {
+    overflow: hidden;
+  }
+  
+  .collapsible-content[data-state="open"] {
+    animation: collapsibleDown 200ms ease-out;
+  }
+  
+  .collapsible-content[data-state="closed"] {
+    animation: collapsibleUp 200ms ease-out;
+  }
+}
+
+@keyframes collapsibleDown {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+}
+
+@keyframes collapsibleUp {
+  from {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+/* Inline expansion transition utilities */
+.expand-transition-container {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panel-transition {
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.inline-expand-card {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+.inline-expand-panel {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ===== Kanban Expand/Collapse Smooth Animations ===== */
+
+/* Stage header animations */
+.stage-header-container {
+  display: flex;
+  gap: 0.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stage-header-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.stage-header-item.expanding-out-left {
+  animation: stageSlideOutLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.stage-header-item.expanding-out-right {
+  animation: stageSlideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.stage-header-item.collapsing-in-left {
+  animation: stageSlideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.stage-header-item.collapsing-in-right {
+  animation: stageSlideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.stage-header-item.active-stage {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), flex 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.details-header {
+  animation: detailsFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.details-header.collapsing {
+  animation: detailsFadeOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes stageSlideOutLeft {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-30px); }
+}
+
+@keyframes stageSlideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(30px); }
+}
+
+@keyframes stageSlideInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes stageSlideInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes detailsFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes detailsFadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.98); }
+}
+
+/* Kanban grid animations */
+.kanban-grid-expanding {
+  animation: kanbanFadeOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.kanban-grid-collapsing {
+  animation: kanbanFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes kanbanFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes kanbanFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Expanded view animations */
+.expanded-card-entering {
+  animation: expandedCardIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.expanded-card-exiting {
+  animation: expandedCardOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.expanded-panel-entering {
+  animation: expandedPanelIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.expanded-panel-exiting {
+  animation: expandedPanelOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes expandedCardIn {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes expandedCardOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-30px); }
+}
+
+@keyframes expandedPanelIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes expandedPanelOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(30px); }
+}
+
+/* Inline Details Panel animations */
+.inline-details-entering {
+  animation: inlineDetailsIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.inline-details-exiting {
+  animation: inlineDetailsOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes inlineDetailsIn {
+  from { 
+    opacity: 0; 
+    transform: translateX(20px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateX(0);
+  }
+}
+
+@keyframes inlineDetailsOut {
+  from { 
+    opacity: 1; 
+    transform: translateX(0);
+  }
+  to { 
+    opacity: 0; 
+    transform: translateX(20px);
+  }
+}
+
+/* Non-selected card dimming in expanded state */
+.deal-card-dimmed {
+  opacity: 0.5;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.deal-card-dimmed:hover {
+  opacity: 0.85;
+  transform: scale(1.01);
 }
