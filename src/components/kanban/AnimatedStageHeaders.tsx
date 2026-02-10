@@ -48,8 +48,8 @@ export function AnimatedStageHeaders({
       // Grid: [before stages] [expanded stage 280px] [details ~60%] [after stages]
       const parts: string[] = [];
       if (beforeCount > 0) parts.push(`repeat(${beforeCount}, minmax(240px, 1fr))`);
-      parts.push('minmax(300px, 300px)'); // expanded stage fixed width
-      parts.push('minmax(750px, 3fr)'); // details panel
+      parts.push('minmax(360px, 360px)'); // expanded stage fixed width
+      parts.push('minmax(850px, 4fr)'); // details panel
       if (afterCount > 0) parts.push(`repeat(${afterCount}, minmax(240px, 1fr))`);
       
       return {
