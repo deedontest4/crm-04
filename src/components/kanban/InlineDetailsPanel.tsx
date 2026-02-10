@@ -21,8 +21,8 @@ export function InlineDetailsPanel({
     <div 
       className="flex flex-col overflow-y-auto"
       style={{ 
-        minHeight: '400px',
-        maxHeight: 'calc(100vh - 180px)',
+        minHeight: '550px',
+        maxHeight: 'calc(100vh - 140px)',
       }}
     >
       <DealExpandedPanel 
