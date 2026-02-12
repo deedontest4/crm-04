@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Deal, DealStage, STAGE_COLORS } from "@/types/deal";
 import { format } from "date-fns";
-import { XCircle, PanelRightOpen } from "lucide-react";
+import { XCircle, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DealCardProps {
@@ -213,7 +213,7 @@ export const DealCard = ({
               className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-1 h-6 w-6 hover:bg-primary/10 text-muted-foreground hover:text-primary"
               title="Expand details"
             >
-              <PanelRightOpen className="w-3.5 h-3.5" />
+              <Activity className="w-3.5 h-3.5" />
             </Button>
           )}
         </div>

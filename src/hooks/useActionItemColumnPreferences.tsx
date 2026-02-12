@@ -13,12 +13,12 @@ export interface ActionItemColumnConfig {
 const defaultColumnWidths: Record<string, number> = {
   checkbox: 48,
   title: 300,
-  assigned_to: 120,
-  status: 110,
+  assigned_to: 100,
   due_date: 100,
-  priority: 80,
-  module: 140,
-  actions: 80,
+  status: 36,
+  priority: 36,
+  module: 36,
+  actions: 60,
 };
 
 const MODULE_NAME = 'action_items';

@@ -23,6 +23,7 @@ interface KanbanBoardProps {
   onDeleteDeals: (dealIds: string[]) => void;
   onImportDeals: (deals: Partial<Deal>[]) => void;
   onRefresh: () => void;
+  headerActions?: React.ReactNode;
 }
 
 export const KanbanBoard = ({ 
@@ -32,7 +33,8 @@ export const KanbanBoard = ({
   onCreateDeal, 
   onDeleteDeals, 
   onImportDeals,
-  onRefresh 
+  onRefresh,
+  headerActions 
 }: KanbanBoardProps) => {
   const [draggedDeal, setDraggedDeal] = useState<string | null>(null);
   const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
@@ -70,6 +72,9 @@ export const KanbanBoard = ({
    const [editingActionItem, setEditingActionItem] = useState<ActionItem | null>(null);
    const [actionModalDealId, setActionModalDealId] = useState<string | null>(null);
    const { createActionItem, updateActionItem } = useActionItems();
+   
+   // Add Detail modal state (triggered from AnimatedStageHeaders "Add" button)
+   const [addDetailOpen, setAddDetailOpen] = useState(false);
 
   // Handle keyboard escape to close expanded panel
   useEffect(() => {
@@ -535,10 +540,10 @@ export const KanbanBoard = ({
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* ALWAYS VISIBLE: Search/Filter Bar */}
-      <div className="flex-shrink-0 px-4 py-2 bg-background border-b border-border">
-        <div className="flex flex-col lg:flex-row gap-2 items-start lg:items-center justify-between">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1 min-w-0">
+      {/* Header with Search/Filter Bar - above divider */}
+      <div className="flex-shrink-0 h-16 px-6 bg-background border-b border-border flex items-center">
+        <div className="flex items-center justify-between w-full gap-4">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <div className="relative flex-1 min-w-[180px] max-w-sm">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3 h-3" />
               <Input
@@ -576,6 +581,7 @@ export const KanbanBoard = ({
               )}
             </div>
           </div>
+          {headerActions}
         </div>
       </div>
 
@@ -620,6 +626,7 @@ export const KanbanBoard = ({
               selectedDeals={selectedDeals}
               onSelectAllInStage={handleSelectAllInStage}
               onCreateDeal={onCreateDeal}
+              onAddDetail={() => setAddDetailOpen(true)}
             />
           </div>
 
@@ -731,6 +738,8 @@ export const KanbanBoard = ({
                           transition={transition}
                           onClose={beginCollapse}
                           onOpenActionItemModal={handleOpenActionItemModal}
+                          addDetailOpen={addDetailOpen}
+                          onAddDetailOpenChange={setAddDetailOpen}
                         />
                       </div>
                     )}

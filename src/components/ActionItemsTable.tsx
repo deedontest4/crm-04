@@ -5,8 +5,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MoreHorizontal, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, CheckCircle } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, CheckCircle, Handshake, UserPlus, Users } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useAllUsers } from '@/hooks/useUserDisplayNames';
@@ -260,25 +261,28 @@ export function ActionItemsTable({
     sortable: true,
     width: columnWidths.assigned_to || 100
   }, {
-    field: 'status',
-    label: 'Status',
-    sortable: true,
-    width: columnWidths.status || 90
-  }, {
     field: 'due_date',
     label: 'Due Date',
     sortable: true,
     width: columnWidths.due_date || 100
   }, {
+    field: 'status',
+    label: 'Status',
+    sortable: true,
+    width: columnWidths.status || 40,
+    compact: true
+  }, {
     field: 'priority',
     label: 'Priority',
     sortable: true,
-    width: columnWidths.priority || 75
+    width: columnWidths.priority || 40,
+    compact: true
   }, {
     field: 'module',
     label: 'Module',
     sortable: true,
-    width: columnWidths.module || 60
+    width: columnWidths.module || 44,
+    compact: true
   }, {
     field: 'actions',
     label: '',
@@ -289,18 +293,19 @@ export function ActionItemsTable({
       <Table>
         <TableHeader className="sticky top-0 z-10">
           <TableRow className="bg-muted/50 border-b-2 border-border">
-            {columns.map(col => <TableHead key={col.field} className={cn('relative text-sm font-bold bg-muted/50 py-3 px-3 h-11 text-foreground text-left', col.sortable && 'cursor-pointer hover:bg-muted/80', sortField === col.field && 'bg-accent', col.field === 'checkbox' && 'w-10', col.field === 'actions' && 'w-[60px] px-2')} style={{
-            width: col.field === 'checkbox' || col.field === 'actions' ? undefined : `${col.width}px`,
-            minWidth: col.field === 'title' ? '200px' : undefined
+            {columns.map(col => <TableHead key={col.field} className={cn('relative text-sm font-bold bg-muted/50 py-3 h-11 text-foreground', col.compact ? 'px-1 text-center' : 'px-3 text-left', col.sortable && 'cursor-pointer hover:bg-muted/80', sortField === col.field && 'bg-accent', col.field === 'checkbox' && 'w-10', col.field === 'actions' && 'w-[60px] px-2')} style={{
+            ...(col.field !== 'checkbox' && col.field !== 'actions' && !col.compact ? { width: `${col.width}px` } : {}),
+            ...(col.compact ? { width: '6.67%', maxWidth: '6.67%' } : {}),
+            ...(col.field === 'title' ? { minWidth: '200px' } : {}),
           }} onClick={() => col.sortable && onSort?.(col.field)}>
                 {col.field === 'checkbox' ? <div className="flex items-center justify-center h-full">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" className={someSelected ? 'data-[state=checked]:bg-primary' : ''} />
-                  </div> : col.label ? <div className="flex items-center gap-1">
+                  </div> : col.label ? <div className={cn('flex items-center gap-1', col.compact && 'justify-center')}>
                     {col.label}
-                    {col.sortable && getSortIcon(col.field)}
+                    {col.sortable && !col.compact && getSortIcon(col.field)}
                   </div> : null}
                 {/* Resize handle */}
-                {col.field !== 'checkbox' && col.field !== 'actions' && <div className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/40 active:bg-primary/60" onMouseDown={e => handleMouseDown(e, col.field)} />}
+                {col.field !== 'checkbox' && col.field !== 'actions' && !col.compact && <div className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/40 active:bg-primary/60" onMouseDown={e => handleMouseDown(e, col.field)} />}
               </TableHead>)}
           </TableRow>
         </TableHeader>
@@ -349,44 +354,6 @@ export function ActionItemsTable({
                   </Select>
                 </TableCell>
 
-                {/* Status */}
-                <TableCell onClick={e => e.stopPropagation()} className="py-2 px-3 text-sm">
-                  <Select value={item.status} onValueChange={(value: ActionItemStatus) => onStatusChange(item.id, value)}>
-                    <SelectTrigger className="h-7 w-auto min-w-0 text-sm border-0 bg-transparent hover:bg-muted/50 px-0 [&>svg]:hidden">
-                      <div className="flex items-center gap-1.5">
-                        <span className={cn('w-2 h-2 rounded-full flex-shrink-0', status.dotColor)} />
-                        <span className="truncate">{item.status}</span>
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Open">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-blue-500" />
-                          Open
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="In Progress">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                          In Progress
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Completed">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-green-500" />
-                          Completed
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Cancelled">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-muted-foreground" />
-                          Cancelled
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-
                 {/* Due Date */}
                 <TableCell onClick={e => e.stopPropagation()} className="py-2 px-3 text-sm">
                   {editingDateId === item.id ? <Input type="date" defaultValue={item.due_date || ''} onBlur={e => handleDueDateBlur(item.id, e.target.value)} onKeyDown={e => {
@@ -400,45 +367,113 @@ export function ActionItemsTable({
                     </button>}
                 </TableCell>
 
-                {/* Priority */}
-                <TableCell onClick={e => e.stopPropagation()} className="py-2 px-3 text-sm">
-                  <Select value={item.priority} onValueChange={(value: ActionItemPriority) => onPriorityChange(item.id, value)}>
-                    <SelectTrigger className="h-7 w-auto min-w-0 text-sm border-0 bg-transparent hover:bg-muted/50 px-0 [&>svg]:hidden">
-                      <div className="flex items-center gap-1.5">
-                        <span className={cn('w-2 h-2 rounded-full flex-shrink-0', priority.bgColor)} />
-                        <span className="truncate">{item.priority}</span>
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="High">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-red-500" />
-                          High
+                {/* Status - dot only */}
+                <TableCell onClick={e => e.stopPropagation()} className="py-2 px-1 text-sm text-center" style={{ width: '6.67%', maxWidth: '6.67%' }}>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex justify-center">
+                          <Select value={item.status} onValueChange={(value: ActionItemStatus) => onStatusChange(item.id, value)}>
+                            <SelectTrigger className="h-7 w-7 min-w-0 text-sm border-0 bg-transparent hover:bg-muted/50 px-0 justify-center [&>svg]:hidden">
+                              <span className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0', status.dotColor)} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Open">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                  Open
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="In Progress">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                                  In Progress
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="Completed">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                                  Completed
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="Cancelled">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-muted-foreground" />
+                                  Cancelled
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
-                      </SelectItem>
-                      <SelectItem value="Medium">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                          Medium
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Low">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-blue-500" />
-                          Low
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">{item.status}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
 
-                {/* Module */}
-                <TableCell className="py-2 px-3 text-sm" style={{
-              maxWidth: '60px'
-            }}>
-                  {item.module_id && linkedRecordName ? <button onClick={e => handleLinkedRecordClick(e, item.module_type, item.module_id!)} className="text-sm truncate block max-w-full text-left text-[#2e538e] font-normal hover:underline">
-                      {linkedRecordName}
-                    </button> : <span className="text-muted-foreground">—</span>}
+                {/* Priority - dot only */}
+                <TableCell onClick={e => e.stopPropagation()} className="py-2 px-1 text-sm text-center" style={{ width: '6.67%', maxWidth: '6.67%' }}>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex justify-center">
+                          <Select value={item.priority} onValueChange={(value: ActionItemPriority) => onPriorityChange(item.id, value)}>
+                            <SelectTrigger className="h-7 w-7 min-w-0 text-sm border-0 bg-transparent hover:bg-muted/50 px-0 justify-center [&>svg]:hidden">
+                              <span className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0', priority.bgColor)} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="High">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                                  High
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="Medium">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                                  Medium
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="Low">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                  Low
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">{item.priority}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableCell>
+
+                {/* Module - icon only */}
+                <TableCell className="py-2 px-1 text-sm text-center" style={{ width: '6.67%', maxWidth: '6.67%' }}>
+                  {item.module_id && linkedRecordName ? (
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={e => handleLinkedRecordClick(e, item.module_type, item.module_id!)}
+                            className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted/50 text-[#2e538e] mx-auto"
+                          >
+                            {(() => {
+                              const t = item.module_type.toLowerCase();
+                              if (t === 'deal' || t === 'deals') return <Handshake className="h-4 w-4" />;
+                              if (t === 'lead' || t === 'leads') return <UserPlus className="h-4 w-4" />;
+                              if (t === 'contact' || t === 'contacts') return <Users className="h-4 w-4" />;
+                              return <span className="text-xs">{t[0]?.toUpperCase()}</span>;
+                            })()}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">{linkedRecordName}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <span className="text-muted-foreground flex justify-center">—</span>
+                  )}
                 </TableCell>
 
                 {/* Actions */}
