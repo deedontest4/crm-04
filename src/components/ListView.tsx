@@ -23,6 +23,7 @@ interface ListViewProps {
   onUpdateDeal: (dealId: string, updates: Partial<Deal>) => void;
   onDeleteDeals: (dealIds: string[]) => void;
   onImportDeals: (deals: Partial<Deal>[]) => void;
+  headerActions?: React.ReactNode;
 }
 
 export const ListView = ({ 
@@ -30,7 +31,8 @@ export const ListView = ({
   onDealClick, 
   onUpdateDeal, 
   onDeleteDeals, 
-  onImportDeals 
+  onImportDeals,
+  headerActions 
 }: ListViewProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<AdvancedFilterState>({
@@ -384,6 +386,8 @@ export const ListView = ({
 
           {/* Spacer */}
           <div className="flex-1" />
+
+          {headerActions}
 
           <DealActionsDropdown
             deals={deals}
