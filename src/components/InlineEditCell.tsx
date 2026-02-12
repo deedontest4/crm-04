@@ -4,8 +4,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Check, X, Edit3 } from "lucide-react";
-import { Deal, DealStage, DEAL_STAGES } from "@/types/deal";
+import { Deal, DealStage, DEAL_STAGES, STAGE_COLORS } from "@/types/deal";
+import { cn } from "@/lib/utils";
 interface InlineEditCellProps {
   value: any;
   field: string;
@@ -83,11 +85,21 @@ export const InlineEditCell = ({
     return String(value);
   };
   if (!isEditing) {
+    const isStage = type === 'stage' && value;
+    const isProjectName = field === 'project_name';
+    const stageColorClass = isStage ? STAGE_COLORS[value as DealStage] || '' : '';
+
     return <div className="group flex items-center justify-between cursor-pointer hover:bg-muted/50 p-1 rounded transition-colors min-h-[32px]" onClick={e => {
       e.stopPropagation();
       setIsEditing(true);
     }} title="Click to edit">
-        <span className="truncate flex-1 text-sm">{formatDisplayValue()}</span>
+        {isStage ? (
+          <Badge className={cn("text-xs font-medium px-2 py-0.5", stageColorClass)}>
+            {String(value)}
+          </Badge>
+        ) : (
+          <span className={cn("truncate flex-1 text-sm", isProjectName && "text-primary font-medium")}>{formatDisplayValue()}</span>
+        )}
         <Edit3 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity ml-1 text-muted-foreground" />
       </div>;
   }

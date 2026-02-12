@@ -136,7 +136,7 @@ export const DealCard = ({
               <div className="w-12 bg-muted/50 rounded-full h-1.5">
                 <div 
                   className="bg-primary/70 rounded-full h-1.5 transition-all duration-300" 
-                  style={{ width: `${deal.probability}%` }}
+                  style={{ width: `${Math.max(deal.probability || 0, 2)}%` }}
                 />
               </div>
               <span className="text-xs font-medium text-foreground">{deal.probability}%</span>
