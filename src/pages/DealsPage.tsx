@@ -400,6 +400,7 @@ const DealsPage = () => {
             onUpdateDeal={handleUpdateDeal}
             onDeleteDeals={handleDeleteDeals}
             onImportDeals={handleImportDeals}
+            headerActions={headerActions}
           />
         )}
       </div>
