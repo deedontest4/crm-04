@@ -430,7 +430,7 @@ export const ListView = ({
                     }
                   }}
                 >
-                  <div className="flex items-center gap-2 pr-4 text-foreground">
+                  <div className="flex items-center gap-2 pr-4 text-foreground whitespace-nowrap">
                     {column.label}
                     {sortBy !== column.field ? (
                       <ArrowUpDown className="w-3 h-3 text-muted-foreground/40" />
