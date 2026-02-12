@@ -349,7 +349,7 @@ export const ListView = ({
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Filter Bar - consistent with other modules */}
-      <div className="flex-shrink-0 border-b bg-muted/30 px-6 py-3">
+      <div className="flex-shrink-0 border-b border-border bg-background px-6 py-3">
         <div className="flex flex-wrap items-center gap-3">
           {/* Search - responsive width like Action Items */}
           <div className="relative flex-1 min-w-[200px] max-w-[300px]">
@@ -461,8 +461,8 @@ export const ListView = ({
               paginatedDeals.map((deal) => (
                 <TableRow 
                   key={deal.id} 
-                  className={`group hover:bg-muted/50 transition-all ${
-                    selectedDeals.has(deal.id) ? 'bg-primary/5' : ''
+                  className={`group hover:bg-muted/30 transition-all ${
+                    selectedDeals.has(deal.id) ? 'bg-primary/5' : 'even:bg-muted/10'
                   }`}
                 >
                   <TableCell className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
@@ -568,6 +568,7 @@ export const ListView = ({
               <Button
                 variant="outline"
                 size="sm"
+                className="shadow-sm"
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
               >
@@ -580,6 +581,7 @@ export const ListView = ({
               <Button
                 variant="outline"
                 size="sm"
+                className="shadow-sm"
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage >= totalPages}
               >
