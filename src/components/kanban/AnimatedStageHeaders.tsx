@@ -1,5 +1,5 @@
 import { Fragment, useMemo } from "react";
-import { DealStage, STAGE_COLORS } from "@/types/deal";
+import { DealStage, STAGE_COLORS, STAGE_BG_COLORS } from "@/types/deal";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -51,7 +51,7 @@ export function AnimatedStageHeaders({
       const parts: string[] = [];
       if (beforeCount > 0) parts.push(`repeat(${beforeCount}, minmax(240px, 1fr))`);
       parts.push('minmax(300px, 300px)'); // expanded stage fixed width
-      parts.push('minmax(750px, 3fr)'); // details panel
+      parts.push('minmax(825px, 3.5fr)'); // details panel
       if (afterCount > 0) parts.push(`repeat(${afterCount}, minmax(240px, 1fr))`);
       
       return {
@@ -85,6 +85,7 @@ export function AnimatedStageHeaders({
             <div
               className={cn(
                 'stage-header-item p-2 rounded-lg border transition-all duration-300',
+                STAGE_BG_COLORS[stage],
                 STAGE_COLORS[stage],
                 isActiveStage && (isExpanding || isExpanded || isCollapsing) && 'w-[280px] flex-shrink-0',
               )}

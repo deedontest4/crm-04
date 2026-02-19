@@ -1,66 +1,66 @@
 
 
-## Enhance Deals Page: Colors, Consistency, and Layout Improvements
+## Plan: Migrate Leads to Contacts and Link to Deals
 
-### Issues Found and Proposed Fixes
+### Current State
+- **14 leads** in the Leads module
+- **4,402 contacts** in the Contacts module
+- **18 deals** in the Lead stage
+- **2 duplicate leads** already exist in Contacts (Niclas Evertsson, Thorsten Labuhn - matched by email)
 
-#### 1. Kanban View - Stage Header Colors Need Stronger Contrast
-The stage headers use CSS variable-based colors (`STAGE_COLORS` from `types/deal.ts`) but the reference screenshot shows more saturated, distinct stage header colors. The current colors are quite pastel and could benefit from stronger differentiation.
+### Migration Steps
 
-**File: `src/index.css`**
-- Adjust the stage CSS variables (lines 51-67) to have slightly more saturated background colors so stages are more visually distinct at a glance (matching the reference screenshot better).
+**Step 1: Create an Edge Function for the migration**
 
-#### 2. List View - Stage Column Needs Color Badges
-Currently, the Stage column in list view renders as plain text via `InlineEditCell`. The reference screenshot shows stage values should have colored badge styling matching their stage color.
+Build a `migrate-leads-to-contacts` edge function that:
 
-**File: `src/components/InlineEditCell.tsx`**
-- In the `formatDisplayValue` / non-editing display (line 86-92), add special rendering for `type === 'stage'` that wraps the stage name in a colored badge using `STAGE_COLORS` from `types/deal.ts`.
+1. Fetches all 14 leads
+2. For each lead, checks if a matching contact already exists (by email or name)
+3. If no duplicate: inserts a new contact record with mapped fields
+4. If duplicate: skips creation, uses the existing contact ID
+5. Updates leads status to "Converted" for migrated leads
+6. Links deals in "Lead" stage to the correct contact by updating the deal's `lead_name` to match the contact name
 
-#### 3. List View - Row Alternating Colors / Hover Enhancement
-The reference screenshot shows subtle alternating row backgrounds for better readability.
+**Step 2: Field Mapping (Leads to Contacts)**
 
-**File: `src/components/ListView.tsx`**
-- Add alternating row styling on `TableRow` (line 462-466): odd rows get a subtle background tint (`bg-muted/10` or similar).
-- Ensure hover state is clearly visible with `hover:bg-muted/40`.
+| Lead Field | Contact Field |
+|---|---|
+| lead_name | contact_name |
+| company_name | company_name |
+| email | email |
+| phone_no | phone_no |
+| position | position |
+| country | region |
+| industry | industry |
+| contact_source | contact_source |
+| linkedin | linkedin |
+| website | website |
+| description | description |
+| contact_owner | contact_owner |
+| created_by | created_by |
 
-#### 4. List View - Header Bar Consistency
-The Kanban and List view headers should look consistent. Currently the List view header has `bg-muted/30` while Kanban uses `bg-background`. 
+**Step 3: Duplicate Handling**
 
-**File: `src/components/ListView.tsx`**
-- Update filter bar background (line 352) from `bg-muted/30` to `bg-background` and add `border-b border-border` to match the Kanban view's header exactly.
-- Adjust search bar height to `h-8` and font to `text-sm` to match Kanban.
+Two leads already exist as contacts:
+- **Niclas Evertsson** (lead email: niclas.evertsson@scania.com) -- existing contact ID: 9c379d7a
+- **Thorsten Labuhn** (lead email: Torsten.Labuhn@bhtc.com, slight name difference) -- existing contact ID: c8339629
 
-#### 5. List View - Project Name Column Should Use Primary Color
-The reference screenshot shows project names in the first column displayed in a blue/primary color to indicate they are clickable.
+These will be skipped during creation. Their existing contact records will be used for deal linking.
 
-**File: `src/components/InlineEditCell.tsx`**
-- When the field is `project_name` (or the first column), render the display value with `text-primary` color class for visual distinction.
+**Step 4: Deal Linking**
 
-#### 6. Kanban View - Card Footer Date Format Consistency  
-Some cards show "Feb 12" while others show "Jan 05" -- this is consistent. But the probability bar width could use a minimum width to avoid looking odd at 0%.
+For each deal in "Lead" stage, match the deal's `lead_name` or `customer_name` to the corresponding contact (newly created or existing duplicate). Update the deal record to ensure `lead_name` correctly references the contact.
 
-**File: `src/components/DealCard.tsx`**
-- Add a minimum display for 0% probability (show "0" text without an empty bar).
+### Files to Create/Modify
 
-#### 7. List View - Pagination Footer Styling
-The pagination footer should match the reference with clearer button styling.
+| File | Action |
+|---|---|
+| `supabase/functions/migrate-leads-to-contacts/index.ts` | New edge function for the migration |
 
-**File: `src/components/ListView.tsx`**
-- Pagination buttons (lines 568-588) are fine but add subtle `shadow-sm` to the Previous/Next buttons for better affordance.
+### Technical Notes
 
-### Technical Summary of File Changes
-
-| File | Changes |
-|------|---------|
-| `src/index.css` | Increase stage color saturation for light theme |
-| `src/components/InlineEditCell.tsx` | Add colored badge for stage display; add primary color for project_name field |
-| `src/components/ListView.tsx` | Alternating row colors; header bar bg consistency; header height matching |
-| `src/components/DealCard.tsx` | Handle 0% probability display edge case |
-
-### What Will NOT Change
-- Kanban board layout, grid columns, and details panel sizing (already updated per previous changes)
-- Deal card structure and fields
-- Drag-and-drop behavior
-- Any database queries or hooks
-- Action items or history sections
+- The edge function will use the service role key for admin-level access
+- The migration is idempotent -- running it again won't create duplicate contacts
+- All 14 leads will have their status set to "Converted" after migration
+- A detailed log/report will be returned showing what was migrated, skipped, and linked
 
