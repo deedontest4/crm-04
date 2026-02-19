@@ -1,24 +1,28 @@
 
 
-## Fix ContactSearchableDropdown Bugs
+## Fix ContactSearchableDropdown - "No contacts found" Still Showing
 
-### Bug 1: Search Shows "No contacts found" for Existing Records
-**Root Cause:** The `cmdk` library has its own built-in text filtering that runs alongside the custom `filteredContacts` filter. When a user types a search term, `cmdk` internally tries to match items by their `value` prop -- this can conflict with the custom filtering logic, causing valid matches to be hidden and showing "No contacts found."
+### Root Cause
+The `shouldFilter={false}` prop correctly prevents `cmdk` from filtering `CommandItem` elements, but `CommandEmpty` still relies on cmdk's internal "no results" state, which can incorrectly trigger. This is a known quirk in cmdk v1.
 
-**Fix in `src/components/ContactSearchableDropdown.tsx`:**
-- Add `shouldFilter={false}` to the `<Command>` component (line 108) to disable cmdk's built-in filtering, relying entirely on the custom `filteredContacts` logic which already works correctly.
-
-### Bug 2: Dropdown Width is Too Large (Spans Beyond Field)
-**Root Cause:** The `PopoverContent` uses `className="w-full p-0"` which doesn't properly constrain the dropdown to the trigger button's width. Compare with `AccountSearchableDropdown` which correctly uses `w-[--radix-popover-trigger-width]`.
-
-**Fix in `src/components/ContactSearchableDropdown.tsx`:**
-- Change the `PopoverContent` className (line 107) from `"w-full p-0"` to `"w-[--radix-popover-trigger-width] p-0"` so the dropdown matches the trigger field width exactly.
-
-### Summary of Changes
+### Fix
 
 **File: `src/components/ContactSearchableDropdown.tsx`**
-- Line 107: Change `w-full` to `w-[--radix-popover-trigger-width]` on PopoverContent
-- Line 108: Add `shouldFilter={false}` to the Command component
 
-No data changes, no structural changes -- just two targeted prop fixes.
+Replace `<CommandEmpty>No contacts found.</CommandEmpty>` with a manual check:
+
+```tsx
+{filteredContacts.length === 0 && !loading && (
+  <div className="py-6 text-center text-sm text-muted-foreground">
+    No contacts found.
+  </div>
+)}
+```
+
+This removes the dependency on cmdk's internal empty-state detection and uses the already-correct `filteredContacts` array length instead.
+
+### Summary
+- One file changed: `src/components/ContactSearchableDropdown.tsx`
+- Remove `CommandEmpty` usage, replace with manual conditional render
+- No data changes, no structural changes
 
