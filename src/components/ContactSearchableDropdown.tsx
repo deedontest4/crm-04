@@ -119,7 +119,11 @@ export const ContactSearchableDropdown = ({
               </div>
             ) : (
               <>
-                <CommandEmpty>No contacts found.</CommandEmpty>
+                {filteredContacts.length === 0 && (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    No contacts found.
+                  </div>
+                )}
                 <CommandGroup>
                   {filteredContacts.map((contact) => (
                     <CommandItem
