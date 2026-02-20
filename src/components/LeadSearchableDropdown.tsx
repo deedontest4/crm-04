@@ -111,8 +111,8 @@ export const LeadSearchableDropdown = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
-        <Command>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command shouldFilter={false}>
           <CommandInput 
             placeholder="Search leads..." 
             value={searchValue}
@@ -126,7 +126,9 @@ export const LeadSearchableDropdown = ({
               </div>
             ) : (
               <>
-                <CommandEmpty>No leads found.</CommandEmpty>
+                {filteredLeads.length === 0 && !loading && (
+                  <div className="py-6 text-center text-sm text-muted-foreground">No leads found.</div>
+                )}
                 <CommandGroup>
                   {filteredLeads.map((lead) => (
                     <CommandItem
