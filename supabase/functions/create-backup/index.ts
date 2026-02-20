@@ -15,7 +15,6 @@ const BACKUP_TABLES = [
 ]
 
 const MODULE_TABLES: Record<string, string[]> = {
-  leads: ['leads', 'lead_action_items'],
   contacts: ['contacts'],
   accounts: ['accounts'],
   deals: ['deals', 'deal_action_items'],

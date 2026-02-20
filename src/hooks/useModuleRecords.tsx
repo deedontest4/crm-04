@@ -22,8 +22,8 @@ export function useModuleRecords(moduleType: ModuleType | null) {
           nameField = 'deal_name';
           break;
         case 'leads':
-          query = supabase.from('leads').select('id, lead_name').order('lead_name');
-          nameField = 'lead_name';
+          query = supabase.from('deals').select('id, deal_name').eq('stage', 'Lead').order('deal_name');
+          nameField = 'deal_name';
           break;
         case 'contacts':
           query = supabase.from('contacts').select('id, contact_name').order('contact_name');
@@ -63,8 +63,8 @@ export function useModuleRecordName(moduleType: string | null, moduleId: string 
           nameField = 'deal_name';
           break;
         case 'leads':
-          query = supabase.from('leads').select('lead_name').eq('id', moduleId).single();
-          nameField = 'lead_name';
+          query = supabase.from('deals').select('deal_name').eq('stage', 'Lead').eq('id', moduleId).single();
+          nameField = 'deal_name';
           break;
         case 'contacts':
           query = supabase.from('contacts').select('contact_name').eq('id', moduleId).single();
@@ -113,10 +113,10 @@ export function useModuleRecordNames(items: Array<{ module_type: string; module_
 
       if (leadIds.length > 0) {
         promises.push(
-          supabase.from('leads').select('id, lead_name').in('id', leadIds)
+          supabase.from('deals').select('id, deal_name').eq('stage', 'Lead').in('id', leadIds)
             .then(({ data }) => {
               (data || []).forEach((l: any) => {
-                names[`leads:${l.id}`] = l.lead_name;
+                names[`leads:${l.id}`] = l.deal_name;
               });
             })
         );

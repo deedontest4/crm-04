@@ -17,6 +17,7 @@ interface Account {
 interface AccountSearchableDropdownProps {
   value?: string;
   onValueChange: (value: string) => void;
+  onAccountSelect?: (account: Account) => void;
   placeholder?: string;
   className?: string;
 }
@@ -24,6 +25,7 @@ interface AccountSearchableDropdownProps {
 export const AccountSearchableDropdown = ({
   value,
   onValueChange,
+  onAccountSelect,
   placeholder = "Select account...",
   className,
 }: AccountSearchableDropdownProps) => {
@@ -67,6 +69,7 @@ export const AccountSearchableDropdown = ({
 
   const handleSelect = (account: Account) => {
     onValueChange(account.account_name);
+    onAccountSelect?.(account);
     setOpen(false);
     setSearchValue("");
   };

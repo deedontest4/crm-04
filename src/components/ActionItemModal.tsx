@@ -237,7 +237,7 @@ export function ActionItemModal({
             </div>
           </div>
 
-          {/* Section 2: Task Details */}
+          {/* Section 2: Action Item Details */}
           <div className="space-y-4">
 
             {/* Title */}

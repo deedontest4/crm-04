@@ -51,11 +51,10 @@ interface BackupSchedule {
 }
 
 const MODULES = [
-  { id: 'leads', name: 'Leads', icon: FileText, color: 'text-blue-500' },
   { id: 'contacts', name: 'Contacts', icon: Users, color: 'text-green-500' },
   { id: 'accounts', name: 'Accounts', icon: Building2, color: 'text-purple-500' },
   { id: 'deals', name: 'Deals', icon: Briefcase, color: 'text-orange-500' },
-  { id: 'action_items', name: 'Tasks', icon: CheckSquare, color: 'text-cyan-500' },
+  { id: 'action_items', name: 'Action Items', icon: CheckSquare, color: 'text-cyan-500' },
 ];
 
 const FREQUENCY_MAP: Record<string, number> = {
@@ -144,7 +143,7 @@ const BackupRestoreSettings = () => {
   }, []);
 
   const fetchModuleCounts = useCallback(async () => {
-    const tables = ['leads', 'contacts', 'accounts', 'deals', 'action_items'];
+    const tables = ['contacts', 'accounts', 'deals', 'action_items'];
     const results: Record<string, number> = {};
     await Promise.all(tables.map(async (table) => {
       const { count } = await supabase.from(table as any).select('*', { count: 'exact', head: true });
