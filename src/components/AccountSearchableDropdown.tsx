@@ -102,7 +102,7 @@ export const AccountSearchableDropdown = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command>
+        <Command shouldFilter={false}>
           <CommandInput
             placeholder="Search accounts..."
             value={searchValue}
@@ -116,7 +116,9 @@ export const AccountSearchableDropdown = ({
               </div>
             ) : (
               <>
-                <CommandEmpty>No accounts found.</CommandEmpty>
+                {filteredAccounts.length === 0 && !loading && (
+                  <div className="py-6 text-center text-sm text-muted-foreground">No accounts found.</div>
+                )}
                 <CommandGroup>
                   {filteredAccounts.map((account) => (
                     <CommandItem
