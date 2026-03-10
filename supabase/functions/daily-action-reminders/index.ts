@@ -246,13 +246,13 @@ Deno.serve(async (req) => {
       const reminderTotalMinutes = reminderHour * 60 + reminderMinute;
       const diff = userTotalMinutes - reminderTotalMinutes;
 
-      if (diff < 0 || diff >= 15) {
+      if (!testUserId && (diff < 0 || diff >= 15)) {
         continue;
       }
 
       // Check if reminder already sent today (in user's timezone)
       const userToday = `${userNow.getFullYear()}-${(userNow.getMonth() + 1).toString().padStart(2, '0')}-${userNow.getDate().toString().padStart(2, '0')}`;
-      if (pref.last_reminder_sent_at === userToday) {
+      if (!testUserId && pref.last_reminder_sent_at === userToday) {
         continue;
       }
 
