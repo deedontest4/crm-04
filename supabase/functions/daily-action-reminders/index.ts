@@ -172,11 +172,28 @@ Deno.serve(async (req) => {
 
     const appUrl = 'https://crm-rt-4.lovable.app';
 
+    // Check for test mode
+    let testUserId: string | null = null;
+    try {
+      const body = await req.json();
+      testUserId = body?.test_user_id || null;
+    } catch { /* no body or not JSON */ }
+
+    if (testUserId) {
+      console.log(`TEST MODE: Running for user ${testUserId} only, bypassing time checks`);
+    }
+
     // Get all users with task_reminders enabled
-    const { data: prefs, error: prefsError } = await supabase
+    let prefsQuery = supabase
       .from('notification_preferences')
       .select('user_id, daily_reminder_time, last_reminder_sent_at, email_notifications')
       .eq('task_reminders', true);
+
+    if (testUserId) {
+      prefsQuery = prefsQuery.eq('user_id', testUserId);
+    }
+
+    const { data: prefs, error: prefsError } = await prefsQuery;
 
     if (prefsError) throw prefsError;
     if (!prefs || prefs.length === 0) {
