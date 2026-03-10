@@ -1,65 +1,91 @@
 
 
-## Email Reminders for Action Items via Microsoft Graph API
+## Fix Note Editor Bullet Point & Stakeholders Layout Issues
 
-### Overview
-Update the `daily-action-reminders` edge function to send email reminders via Microsoft Graph API to users with pending/overdue action items. Set up the cron job to trigger it every 15 minutes.
+### Issues Found
 
-### Step 1: Store Microsoft Graph API Secrets
-Add 4 secrets to Supabase:
-- `AZURE_TENANT_ID` - Azure AD tenant ID
-- `AZURE_CLIENT_ID` - App registration client ID  
-- `AZURE_CLIENT_SECRET` - App registration client secret
-- `AZURE_SENDER_EMAIL` - Sender mailbox (e.g., notifications@yourdomain.com)
+1. **Bullet point moves when typing**: `autoFocus` on the Textarea (line 633) places the cursor at position 0 (before `"• "`), so typing inserts text before the bullet instead of after it.
 
-### Step 2: Update Edge Function
-**File: `supabase/functions/daily-action-reminders/index.ts`**
+2. **Notes panel lacks proper scrollbar**: The notes summary panel (line 580-679) has a `max-h-[280px]` on the inner div but the outer wrapper has no scroll constraint, so it still pushes content.
 
-Enhance the existing function to:
-1. Acquire an OAuth2 token from Azure AD using client credentials flow (`https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`)
-2. After inserting the in-app notification (existing behavior preserved), also send an email via Microsoft Graph API (`https://graph.microsoft.com/v1.0/users/{sender}/sendMail`)
-3. Only send emails to users who have `email_notifications` enabled in their preferences
-4. Fetch user email from the `profiles` table (`"Email ID"` column)
-5. Build an HTML email with:
-   - User's name greeting
-   - Count of pending action items
-   - Table listing each action item (title, due date, priority, status)
-   - Overdue/high-priority highlights
-   - Link to the CRM action items page
-6. Track email send results in logs
+3. **Stakeholders section grows unbounded**: The `StakeholdersSection` component has no max-height. When the Notes panel is open with many notes, it consumes all vertical space, squishing the Updates and Action Items sections to near-zero height.
 
-Key logic flow:
-```text
-For each user with task_reminders enabled:
-  1. Check timezone window & already-sent-today (existing)
-  2. Fetch pending action items (existing)
-  3. Insert in-app notification (existing)
-  4. If email_notifications enabled AND user has email:
-     → Send email via Graph API
-  5. Update last_reminder_sent_at (existing)
+### Changes (single file: `src/components/DealExpandedPanel.tsx`)
+
+#### Fix 1: Bullet cursor positioning (line 628-634)
+
+Replace `autoFocus` on the Textarea with a `ref` callback that focuses the element AND places the cursor at the end of the text (after `"• "`):
+
+```tsx
+<Textarea
+  value={noteText}
+  onChange={(e) => setNoteText(e.target.value)}
+  onKeyDown={handleNoteKeyDown}
+  className="min-h-[100px] text-xs resize-none"
+  ref={(el) => {
+    if (el) {
+      el.focus();
+      const len = el.value.length;
+      el.selectionStart = len;
+      el.selectionEnd = len;
+    }
+  }}
+/>
 ```
 
-### Step 3: Set Up Cron Job
-Run SQL via the Supabase SQL editor to create a `pg_cron` job that invokes the edge function every 15 minutes:
-```sql
-SELECT cron.schedule(
-  'daily-action-reminders',
-  '*/15 * * * *',
-  $$ SELECT net.http_post(
-    url := 'https://nreslricievaamrwfrlx.supabase.co/functions/v1/daily-action-reminders',
-    headers := '{"Content-Type":"application/json","Authorization":"Bearer <anon_key>"}'::jsonb,
-    body := '{"time":"' || now() || '"}'::jsonb
-  ) AS request_id; $$
-);
+#### Fix 2: Constrain Stakeholders section height
+
+Wrap the StakeholdersSection output in a container with `max-h` and `overflow-y-auto` so it scrolls when content is large. Change the outer div (line 462) from:
+
+```tsx
+<div className="px-3 pt-1.5 pb-1">
 ```
 
-### Step 4: Deploy & Test
-- Deploy the updated edge function
-- Test with `curl_edge_functions` to verify it runs correctly
-- Check logs for email delivery confirmation
+to:
 
-### No Breaking Changes
-- Existing in-app notification behavior is fully preserved
-- Email sending is additive - only runs when `email_notifications` is enabled
-- No database schema changes needed (all required columns already exist)
+```tsx
+<div className="px-3 pt-1.5 pb-1 max-h-[45%] overflow-y-auto shrink-0">
+```
+
+However, since this is not inside a flex parent that uses percentage heights well, a better approach is to change the parent layout. The parent (line 1182) is:
+
+```tsx
+<div className="flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
+```
+
+The fix: Make the StakeholdersSection a flex item that can shrink, and give it a max-height so it doesn't dominate. Change line 1184 from:
+
+```tsx
+<StakeholdersSection deal={deal} queryClient={queryClient} />
+```
+
+to wrap it in a constrained container:
+
+```tsx
+<div className="shrink-0 max-h-[40%] overflow-y-auto">
+  <StakeholdersSection deal={deal} queryClient={queryClient} />
+</div>
+```
+
+This ensures:
+- Stakeholders section gets at most 40% of the panel height
+- When content exceeds that, a scrollbar appears
+- Updates and Action Items always get their fair share of space
+
+#### Fix 3: Ensure notes panel scrolls properly
+
+The notes summary panel (line 596) already has `max-h-[280px] overflow-y-auto`, but when inside the constrained container from Fix 2, this works correctly. No additional change needed here -- the outer scroll from Fix 2 handles it.
+
+### Summary
+
+| Change | Line(s) | Description |
+|--------|---------|-------------|
+| Replace `autoFocus` with ref callback | 628-634 | Cursor placed after bullet on open |
+| Wrap StakeholdersSection in scrollable container | 1184 | Max 40% height with scrollbar |
+
+### Technical Notes
+
+- The ref callback fires on every render, but since `el.focus()` is idempotent when already focused, this is harmless
+- The `max-h-[40%]` works because the parent has `flex-1 min-h-0` which resolves to an actual pixel height
+- Updates and Action Items sections keep their `flex-1 min-h-0` with `h-[220px]`, ensuring they share remaining space equally
 
