@@ -379,12 +379,59 @@ export type Database = {
           },
         ]
       }
+      deal_stakeholders: {
+        Row: {
+          contact_id: string
+          created_at: string | null
+          created_by: string | null
+          deal_id: string
+          id: string
+          note: string | null
+          role: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string | null
+          created_by?: string | null
+          deal_id: string
+          id?: string
+          note?: string | null
+          role: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          deal_id?: string
+          id?: string
+          note?: string | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_stakeholders_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_stakeholders_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deals: {
         Row: {
           account_id: string | null
           action_items: string | null
           budget: string | null
+          budget_owner_contact_id: string | null
           business_value: string | null
+          champion_contact_id: string | null
           closing: string | null
           created_at: string | null
           created_by: string
@@ -401,6 +448,7 @@ export type Database = {
           handoff_status: string | null
           id: string
           implementation_start_date: string | null
+          influencer_contact_id: string | null
           internal_comment: string | null
           is_recurring: string | null
           lead_name: string | null
@@ -409,6 +457,7 @@ export type Database = {
           modified_at: string | null
           modified_by: string | null
           need_improvement: string | null
+          objector_contact_id: string | null
           priority: number | null
           probability: number | null
           project_duration: number | null
@@ -433,7 +482,9 @@ export type Database = {
           account_id?: string | null
           action_items?: string | null
           budget?: string | null
+          budget_owner_contact_id?: string | null
           business_value?: string | null
+          champion_contact_id?: string | null
           closing?: string | null
           created_at?: string | null
           created_by: string
@@ -450,6 +501,7 @@ export type Database = {
           handoff_status?: string | null
           id?: string
           implementation_start_date?: string | null
+          influencer_contact_id?: string | null
           internal_comment?: string | null
           is_recurring?: string | null
           lead_name?: string | null
@@ -458,6 +510,7 @@ export type Database = {
           modified_at?: string | null
           modified_by?: string | null
           need_improvement?: string | null
+          objector_contact_id?: string | null
           priority?: number | null
           probability?: number | null
           project_duration?: number | null
@@ -482,7 +535,9 @@ export type Database = {
           account_id?: string | null
           action_items?: string | null
           budget?: string | null
+          budget_owner_contact_id?: string | null
           business_value?: string | null
+          champion_contact_id?: string | null
           closing?: string | null
           created_at?: string | null
           created_by?: string
@@ -499,6 +554,7 @@ export type Database = {
           handoff_status?: string | null
           id?: string
           implementation_start_date?: string | null
+          influencer_contact_id?: string | null
           internal_comment?: string | null
           is_recurring?: string | null
           lead_name?: string | null
@@ -507,6 +563,7 @@ export type Database = {
           modified_at?: string | null
           modified_by?: string | null
           need_improvement?: string | null
+          objector_contact_id?: string | null
           priority?: number | null
           probability?: number | null
           project_duration?: number | null
@@ -673,10 +730,12 @@ export type Database = {
           accounts_notifications: boolean | null
           contacts_notifications: boolean | null
           created_at: string | null
+          daily_reminder_time: string | null
           deal_updates: boolean | null
           email_notifications: boolean | null
           id: string
           in_app_notifications: boolean | null
+          last_reminder_sent_at: string | null
           lead_assigned: boolean | null
           leads_notifications: boolean | null
           meeting_reminders: boolean | null
@@ -691,10 +750,12 @@ export type Database = {
           accounts_notifications?: boolean | null
           contacts_notifications?: boolean | null
           created_at?: string | null
+          daily_reminder_time?: string | null
           deal_updates?: boolean | null
           email_notifications?: boolean | null
           id?: string
           in_app_notifications?: boolean | null
+          last_reminder_sent_at?: string | null
           lead_assigned?: boolean | null
           leads_notifications?: boolean | null
           meeting_reminders?: boolean | null
@@ -709,10 +770,12 @@ export type Database = {
           accounts_notifications?: boolean | null
           contacts_notifications?: boolean | null
           created_at?: string | null
+          daily_reminder_time?: string | null
           deal_updates?: boolean | null
           email_notifications?: boolean | null
           id?: string
           in_app_notifications?: boolean | null
+          last_reminder_sent_at?: string | null
           lead_assigned?: boolean | null
           leads_notifications?: boolean | null
           meeting_reminders?: boolean | null

@@ -111,14 +111,20 @@ export const LeadSearchableDropdown = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start" style={{ pointerEvents: 'auto' }}>
         <Command shouldFilter={false}>
           <CommandInput 
             placeholder="Search leads..." 
             value={searchValue}
             onValueChange={setSearchValue}
           />
-          <CommandList>
+          <CommandList
+            onWheel={(e) => {
+              e.stopPropagation();
+              const target = e.currentTarget;
+              target.scrollTop += e.deltaY;
+            }}
+          >
             {loading ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="h-4 w-4 animate-spin" />
