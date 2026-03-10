@@ -172,11 +172,28 @@ Deno.serve(async (req) => {
 
     const appUrl = 'https://crm-rt-4.lovable.app';
 
+    // Check for test mode
+    let testUserId: string | null = null;
+    try {
+      const body = await req.json();
+      testUserId = body?.test_user_id || null;
+    } catch { /* no body or not JSON */ }
+
+    if (testUserId) {
+      console.log(`TEST MODE: Running for user ${testUserId} only, bypassing time checks`);
+    }
+
     // Get all users with task_reminders enabled
-    const { data: prefs, error: prefsError } = await supabase
+    let prefsQuery = supabase
       .from('notification_preferences')
       .select('user_id, daily_reminder_time, last_reminder_sent_at, email_notifications')
       .eq('task_reminders', true);
+
+    if (testUserId) {
+      prefsQuery = prefsQuery.eq('user_id', testUserId);
+    }
+
+    const { data: prefs, error: prefsError } = await prefsQuery;
 
     if (prefsError) throw prefsError;
     if (!prefs || prefs.length === 0) {
@@ -229,13 +246,13 @@ Deno.serve(async (req) => {
       const reminderTotalMinutes = reminderHour * 60 + reminderMinute;
       const diff = userTotalMinutes - reminderTotalMinutes;
 
-      if (diff < 0 || diff >= 15) {
+      if (!testUserId && (diff < 0 || diff >= 15)) {
         continue;
       }
 
       // Check if reminder already sent today (in user's timezone)
       const userToday = `${userNow.getFullYear()}-${(userNow.getMonth() + 1).toString().padStart(2, '0')}-${userNow.getDate().toString().padStart(2, '0')}`;
-      if (pref.last_reminder_sent_at === userToday) {
+      if (!testUserId && pref.last_reminder_sent_at === userToday) {
         continue;
       }
 
