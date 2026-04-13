@@ -125,6 +125,35 @@ export default function CampaignDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {/* MART pills — compact inline */}
+          <div className="hidden md:flex items-center gap-1 mr-2">
+            {[
+              { key: "M", label: "Message", done: isMARTComplete.message },
+              { key: "A", label: "Audience", done: isMARTComplete.audience },
+              { key: "R", label: "Region", done: isMARTComplete.region },
+              { key: "T", label: "Timing", done: isMARTComplete.timing },
+            ].map((item) => (
+              <button
+                key={item.key}
+                onClick={() => setActiveTab("mart")}
+                title={`${item.label}: ${item.done ? "Done" : "Pending"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-colors ${
+                  item.done
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {item.done ? (
+                  <CheckCircle2 className="h-3 w-3" />
+                ) : (
+                  <Circle className="h-3 w-3" />
+                )}
+                {item.key}
+              </button>
+            ))}
+            <span className="text-[10px] text-muted-foreground ml-1">{martProgress}/4</span>
+          </div>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1">
@@ -168,45 +197,6 @@ export default function CampaignDetail() {
           This campaign ended on {campaign.end_date}. Outreach is closed.
         </div>
       )}
-
-      {/* MART Progress — clickable pills */}
-      <div className="px-6 pt-4">
-        <Card>
-          <CardContent className="py-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">MART Strategy</span>
-              <span className="text-sm text-muted-foreground">{martProgress}/4 Complete</span>
-            </div>
-            <Progress value={martProgress * 25} className="h-2 mb-3" />
-            <div className="flex gap-2">
-              {[
-                { key: "M", label: "Message", done: isMARTComplete.message },
-                { key: "A", label: "Audience", done: isMARTComplete.audience },
-                { key: "R", label: "Region", done: isMARTComplete.region },
-                { key: "T", label: "Timing", done: isMARTComplete.timing },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => setActiveTab("mart")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    item.done
-                      ? "bg-primary/10 text-primary border border-primary/20"
-                      : "bg-muted text-muted-foreground border border-border"
-                  }`}
-                >
-                  {item.done ? (
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <Circle className="h-3.5 w-3.5" />
-                  )}
-                  {item.key}
-                  <span className="hidden sm:inline">— {item.label}</span>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* 7 Tabs per spec */}
       <div className="flex-1 overflow-hidden px-6 pt-4 pb-6">
