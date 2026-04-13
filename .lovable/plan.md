@@ -1,50 +1,54 @@
 
 
-## Enhance Campaigns Module UI
+## Enhanced Campaign Dashboard - Complete Rebuild
 
 ### Problem
-1. No dashboard/overview view -- only a list table exists
-2. Header layout doesn't match other modules (uses `p-6 pb-4` instead of `h-16 px-6 border-b` fixed height)
-3. Filter bar styling inconsistent (uses `p-4 border-b` instead of `bg-muted/30 px-6 py-3`)
+The current campaign dashboard is static, wastes space, has non-functional clickable areas, and lacks real data visualizations (charts). The status breakdown and MART progress sections are basic progress bars with no interactivity.
 
-### Changes
+### Solution
+Rebuild `CampaignDashboard.tsx` with a dense, interactive layout featuring real Recharts charts, clickable stat cards that filter the view, aggregate metrics from campaign_accounts/contacts/communications tables, and a better space-efficient layout.
 
-**1. Add a Campaign Dashboard view** — new file `src/components/campaigns/CampaignDashboard.tsx`
+### Architecture
 
-A grid-based overview showing:
-- **Summary stat cards** (row 1): Total Campaigns, Active, Draft, Completed -- small cards with counts
-- **MART Progress overview** (row 2): Shows campaigns with their MART completion as progress bars
-- **Status breakdown** (row 2): A simple status distribution (bar or donut chart)
-- **Recent campaigns** (row 3): Last 5 campaigns as compact clickable cards with status badge, type, date range
-
-Uses existing `useCampaigns` hook data -- no new queries needed.
-
-**2. Add view toggle to Campaigns page** — modify `src/pages/Campaigns.tsx`
-
-- Add `ToggleGroup` with "Dashboard" and "List" views (matching Deals page pattern with `LayoutGrid` / `List` icons)
-- Fix header to use `h-16 px-6 border-b bg-background` (matching Contacts/Accounts pattern)
-- Fix filter bar to use `bg-muted/30 px-6 py-3` styling
-- Move view toggle + "New Campaign" button into the header row
-- Dashboard view shown by default, list view shows the existing table
-- Filters only visible in List view
-
-**3. Layout alignment fix**
-
-Replace:
-```
-<div className="flex items-center justify-between p-6 pb-4 border-b border-border">
-```
-With:
-```
-<div className="flex-shrink-0 h-16 px-6 border-b bg-background flex items-center justify-between">
+```text
++-------+-------+-------+-------+-------+
+| Total | Active| Draft |Complete|Paused | <- Clickable stat cards (filter below)
++-------+-------+-------+-------+-------+
+|  Status Pie Chart  | Campaign Type Bar  |  <- Recharts visualizations
+|   (click slice =   |  Chart (by type    |
+|    filter below)   |   distribution)    |
++--------------------+--------------------+
+| MART Progress  | Activity Summary       |
+| (compact bars) | (accounts/contacts/    |
+|                |  comms aggregates)     |
++--------------------+--------------------+
+|        All Campaigns Table (filtered)   | <- Clickable rows navigate to detail
++-----------------------------------------+
 ```
 
-This aligns the header divider with the sidebar icon divider, matching Contacts and Accounts modules.
+### Data Fetching
+- Add new queries in the dashboard component to fetch aggregate counts from `campaign_accounts`, `campaign_contacts`, and `campaign_communications` grouped by campaign_id
+- Use existing `campaigns` and `getMartProgress` props
 
-### Files
+### File Changes
 
-| File | Action |
-|---|---|
-| `src/components/campaigns/CampaignDashboard.tsx` | Create -- dashboard view with stats, MART progress, status breakdown |
-| `src/pages/Campaigns.tsx` | Modify -- add view toggle, fix header/filter bar layout to match other modules |
+**1. `src/components/campaigns/CampaignDashboard.tsx`** (full rewrite)
+
+- **Clickable stat cards**: Clicking "Active" filters the campaigns table below to show only Active campaigns. Clicking again (or "Total") resets filter.
+- **Status Distribution Pie Chart** (Recharts `PieChart`): Shows Active/Draft/Completed/Paused proportions with matching colors. Click a slice to filter.
+- **Campaign Type Bar Chart** (Recharts `BarChart`): Shows count by campaign_type (Cold Outreach, Nurture, etc.). Click a bar to filter by type.
+- **MART Progress section**: Compact horizontal bars, clickable rows navigate to campaign detail. Show all campaigns (not just 8).
+- **Activity Summary card**: Total accounts targeted, contacts added, communications sent across all campaigns. Fetched via Supabase queries inside the component.
+- **Filtered Campaigns Table**: Replaces "Recent Campaigns" cards. Full table with columns: Name, Type, Status, MART, Accounts, Contacts, Start/End Date. All rows clickable. Responds to stat card / chart filters. Includes inline search.
+
+**2. `src/pages/Campaigns.tsx`** (minor update)
+- Pass additional data to `CampaignDashboard` if needed, or let the dashboard fetch its own aggregate data internally.
+
+### Technical Details
+- Uses existing Recharts library (already imported in `chart.tsx`) via `ChartContainer`, `ChartTooltip`, `ChartTooltipContent`
+- Uses `PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer` from recharts
+- State: `statusFilter` and `typeFilter` managed locally in dashboard
+- All campaign rows navigate via `navigate(/campaigns/${id})`
+- Responsive grid: 5-col stats, 2-col charts, full-width table
+- No new dependencies needed
 
