@@ -212,7 +212,7 @@ export default function CampaignDetail() {
       <div className="flex-1 overflow-hidden px-6 pt-4 pb-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <div className="overflow-x-auto">
-            <TabsList className="w-fit">
+            <TabsList className="w-full">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="mart">MART Strategy</TabsTrigger>
               <TabsTrigger value="accounts">Accounts</TabsTrigger>
