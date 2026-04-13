@@ -261,7 +261,7 @@ export function CampaignDashboard({ campaigns, getMartProgress }: CampaignDashbo
               <p className="text-sm text-muted-foreground text-center py-8">No data</p>
             ) : (
               <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={barData} onClick={handleBarClick} cursor="pointer">
+                <BarChart data={barData} onClick={handleBarClick} style={{ cursor: "pointer" }}>
                   <XAxis
                     dataKey="name"
                     tick={{ fontSize: 10 }}
