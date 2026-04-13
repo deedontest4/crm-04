@@ -1,91 +1,50 @@
 
 
-## Fix Note Editor Bullet Point & Stakeholders Layout Issues
+## Enhance Campaigns Module UI
 
-### Issues Found
+### Problem
+1. No dashboard/overview view -- only a list table exists
+2. Header layout doesn't match other modules (uses `p-6 pb-4` instead of `h-16 px-6 border-b` fixed height)
+3. Filter bar styling inconsistent (uses `p-4 border-b` instead of `bg-muted/30 px-6 py-3`)
 
-1. **Bullet point moves when typing**: `autoFocus` on the Textarea (line 633) places the cursor at position 0 (before `"• "`), so typing inserts text before the bullet instead of after it.
+### Changes
 
-2. **Notes panel lacks proper scrollbar**: The notes summary panel (line 580-679) has a `max-h-[280px]` on the inner div but the outer wrapper has no scroll constraint, so it still pushes content.
+**1. Add a Campaign Dashboard view** — new file `src/components/campaigns/CampaignDashboard.tsx`
 
-3. **Stakeholders section grows unbounded**: The `StakeholdersSection` component has no max-height. When the Notes panel is open with many notes, it consumes all vertical space, squishing the Updates and Action Items sections to near-zero height.
+A grid-based overview showing:
+- **Summary stat cards** (row 1): Total Campaigns, Active, Draft, Completed -- small cards with counts
+- **MART Progress overview** (row 2): Shows campaigns with their MART completion as progress bars
+- **Status breakdown** (row 2): A simple status distribution (bar or donut chart)
+- **Recent campaigns** (row 3): Last 5 campaigns as compact clickable cards with status badge, type, date range
 
-### Changes (single file: `src/components/DealExpandedPanel.tsx`)
+Uses existing `useCampaigns` hook data -- no new queries needed.
 
-#### Fix 1: Bullet cursor positioning (line 628-634)
+**2. Add view toggle to Campaigns page** — modify `src/pages/Campaigns.tsx`
 
-Replace `autoFocus` on the Textarea with a `ref` callback that focuses the element AND places the cursor at the end of the text (after `"• "`):
+- Add `ToggleGroup` with "Dashboard" and "List" views (matching Deals page pattern with `LayoutGrid` / `List` icons)
+- Fix header to use `h-16 px-6 border-b bg-background` (matching Contacts/Accounts pattern)
+- Fix filter bar to use `bg-muted/30 px-6 py-3` styling
+- Move view toggle + "New Campaign" button into the header row
+- Dashboard view shown by default, list view shows the existing table
+- Filters only visible in List view
 
-```tsx
-<Textarea
-  value={noteText}
-  onChange={(e) => setNoteText(e.target.value)}
-  onKeyDown={handleNoteKeyDown}
-  className="min-h-[100px] text-xs resize-none"
-  ref={(el) => {
-    if (el) {
-      el.focus();
-      const len = el.value.length;
-      el.selectionStart = len;
-      el.selectionEnd = len;
-    }
-  }}
-/>
+**3. Layout alignment fix**
+
+Replace:
+```
+<div className="flex items-center justify-between p-6 pb-4 border-b border-border">
+```
+With:
+```
+<div className="flex-shrink-0 h-16 px-6 border-b bg-background flex items-center justify-between">
 ```
 
-#### Fix 2: Constrain Stakeholders section height
+This aligns the header divider with the sidebar icon divider, matching Contacts and Accounts modules.
 
-Wrap the StakeholdersSection output in a container with `max-h` and `overflow-y-auto` so it scrolls when content is large. Change the outer div (line 462) from:
+### Files
 
-```tsx
-<div className="px-3 pt-1.5 pb-1">
-```
-
-to:
-
-```tsx
-<div className="px-3 pt-1.5 pb-1 max-h-[45%] overflow-y-auto shrink-0">
-```
-
-However, since this is not inside a flex parent that uses percentage heights well, a better approach is to change the parent layout. The parent (line 1182) is:
-
-```tsx
-<div className="flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
-```
-
-The fix: Make the StakeholdersSection a flex item that can shrink, and give it a max-height so it doesn't dominate. Change line 1184 from:
-
-```tsx
-<StakeholdersSection deal={deal} queryClient={queryClient} />
-```
-
-to wrap it in a constrained container:
-
-```tsx
-<div className="shrink-0 max-h-[40%] overflow-y-auto">
-  <StakeholdersSection deal={deal} queryClient={queryClient} />
-</div>
-```
-
-This ensures:
-- Stakeholders section gets at most 40% of the panel height
-- When content exceeds that, a scrollbar appears
-- Updates and Action Items always get their fair share of space
-
-#### Fix 3: Ensure notes panel scrolls properly
-
-The notes summary panel (line 596) already has `max-h-[280px] overflow-y-auto`, but when inside the constrained container from Fix 2, this works correctly. No additional change needed here -- the outer scroll from Fix 2 handles it.
-
-### Summary
-
-| Change | Line(s) | Description |
-|--------|---------|-------------|
-| Replace `autoFocus` with ref callback | 628-634 | Cursor placed after bullet on open |
-| Wrap StakeholdersSection in scrollable container | 1184 | Max 40% height with scrollbar |
-
-### Technical Notes
-
-- The ref callback fires on every render, but since `el.focus()` is idempotent when already focused, this is harmless
-- The `max-h-[40%]` works because the parent has `flex-1 min-h-0` which resolves to an actual pixel height
-- Updates and Action Items sections keep their `flex-1 min-h-0` with `h-[220px]`, ensuring they share remaining space equally
+| File | Action |
+|---|---|
+| `src/components/campaigns/CampaignDashboard.tsx` | Create -- dashboard view with stats, MART progress, status breakdown |
+| `src/pages/Campaigns.tsx` | Modify -- add view toggle, fix header/filter bar layout to match other modules |
 
