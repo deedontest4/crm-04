@@ -30,7 +30,7 @@ const FixedSidebarLayout = ({ children }: { children: React.ReactNode }) => {
   
   // These routes need overflow-hidden so they can control their own scrolling
   const controlledScrollRoutes = ['/action-items', '/contacts', '/deals', '/settings', '/notifications', '/', '/accounts', '/campaigns'];
-  const needsControlledScroll = controlledScrollRoutes.includes(location.pathname);
+  const needsControlledScroll = controlledScrollRoutes.includes(location.pathname) || location.pathname.startsWith('/campaigns/');
   
   return (
     <div className="h-screen flex w-full overflow-hidden">

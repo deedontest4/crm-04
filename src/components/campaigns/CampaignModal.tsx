@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useCampaigns, type CampaignFormData, type Campaign } from "@/hooks/useCampaigns";
+import { supabase } from "@/integrations/supabase/client";
 import { useAllUsers } from "@/hooks/useUserDisplayNames";
 
 const CAMPAIGN_TYPES = ["Cold Outreach", "Nurture", "Re-engagement", "Event", "Product Launch"];
@@ -90,17 +91,47 @@ export function CampaignModal({ open, onClose, campaign, isMARTComplete = false,
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const checkDuplicateName = async (): Promise<boolean> => {
+    const trimmedName = formData.campaign_name.trim();
+    const { data } = await supabase
+      .from("campaigns")
+      .select("id")
+      .ilike("campaign_name", trimmedName);
+    
+    if (data && data.length > 0) {
+      // If editing, exclude the current campaign
+      const duplicates = isEditing && campaign 
+        ? data.filter(d => d.id !== campaign.id) 
+        : data;
+      if (duplicates.length > 0) {
+        setErrors(prev => ({ ...prev, campaign_name: "A campaign with this name already exists" }));
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
     if (!validate()) return;
+    
+    setSubmitting(true);
+    const isDuplicate = await checkDuplicateName();
+    if (isDuplicate) {
+      setSubmitting(false);
+      return;
+    }
 
     if (isEditing && campaign) {
-      updateCampaign.mutate({ id: campaign.id, ...formData }, { onSuccess: onClose });
+      updateCampaign.mutate({ id: campaign.id, ...formData }, { onSuccess: onClose, onSettled: () => setSubmitting(false) });
     } else {
       createCampaign.mutate(formData, {
         onSuccess: (data) => {
           onClose();
           if (onCreated && data?.id) onCreated(data.id);
         },
+        onSettled: () => setSubmitting(false),
       });
     }
   };
@@ -200,8 +231,8 @@ export function CampaignModal({ open, onClose, campaign, isMARTComplete = false,
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={createCampaign.isPending || updateCampaign.isPending}>
-            {createCampaign.isPending || updateCampaign.isPending ? "Saving..." : isEditing ? "Update" : "Create"}
+          <Button onClick={handleSubmit} disabled={submitting || createCampaign.isPending || updateCampaign.isPending}>
+            {submitting || createCampaign.isPending || updateCampaign.isPending ? "Saving..." : isEditing ? "Update" : "Create"}
           </Button>
         </DialogFooter>
       </DialogContent>

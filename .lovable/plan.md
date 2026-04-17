@@ -1,54 +1,45 @@
 
 
-## Enhanced Campaign Dashboard - Complete Rebuild
+# Fix Plan: Account Table & Modal Improvements
 
-### Problem
-The current campaign dashboard is static, wastes space, has non-functional clickable areas, and lacks real data visualizations (charts). The status breakdown and MART progress sections are basic progress bars with no interactivity.
+## Changes
 
-### Solution
-Rebuild `CampaignDashboard.tsx` with a dense, interactive layout featuring real Recharts charts, clickable stat cards that filter the view, aggregate metrics from campaign_accounts/contacts/communications tables, and a better space-efficient layout.
+### 1. Add Description Column to Account Table (AccountTable.tsx + AccountTableBody.tsx)
 
-### Architecture
+**AccountTable.tsx (line 42):** Insert `description` column at order 1 (after account_name), shift all other orders up by 1. Also add `'description'` to `searchFields`.
 
-```text
-+-------+-------+-------+-------+-------+
-| Total | Active| Draft |Complete|Paused | <- Clickable stat cards (filter below)
-+-------+-------+-------+-------+-------+
-|  Status Pie Chart  | Campaign Type Bar  |  <- Recharts visualizations
-|   (click slice =   |  Chart (by type    |
-|    filter below)   |   distribution)    |
-+--------------------+--------------------+
-| MART Progress  | Activity Summary       |
-| (compact bars) | (accounts/contacts/    |
-|                |  comms aggregates)     |
-+--------------------+--------------------+
-|        All Campaigns Table (filtered)   | <- Clickable rows navigate to detail
-+-----------------------------------------+
-```
+**AccountTableBody.tsx:**
+- Add `description` field formatting in `formatCellValue` — render with `line-clamp-2` and `truncate` to prevent overflow
+- In table cell classes (line 277-285), add specific width rule for `description`: `min-w-[250px] max-w-[350px]`
+- Apply `table-fixed` layout with explicit column widths to prevent content overlap across ALL columns
+- For `linked_contacts` column header, center-align the label text to match the centered badge data
 
-### Data Fetching
-- Add new queries in the dashboard component to fetch aggregate counts from `campaign_accounts`, `campaign_contacts`, and `campaign_communications` grouped by campaign_id
-- Use existing `campaigns` and `getMartProgress` props
+### 2. Fix Column Overflow / Alignment Issues (AccountTableBody.tsx)
 
-### File Changes
+- Add `overflow-hidden text-ellipsis` to all table cells to prevent text from bleeding into adjacent columns
+- Set `table-layout: fixed` on the Table element so column widths are enforced
+- Ensure `linked_contacts` header text is centered (currently uses left-aligned `<span>` but data is centered)
+- Set proper `min-width` values: account_name 200px, description 250px, linked 80px centered, others 100px
 
-**1. `src/components/campaigns/CampaignDashboard.tsx`** (full rewrite)
+### 3. Rearrange Account Modal Fields (AccountModal.tsx)
 
-- **Clickable stat cards**: Clicking "Active" filters the campaigns table below to show only Active campaigns. Clicking again (or "Total") resets filter.
-- **Status Distribution Pie Chart** (Recharts `PieChart`): Shows Active/Draft/Completed/Paused proportions with matching colors. Click a slice to filter.
-- **Campaign Type Bar Chart** (Recharts `BarChart`): Shows count by campaign_type (Cold Outreach, Nurture, etc.). Click a bar to filter by type.
-- **MART Progress section**: Compact horizontal bars, clickable rows navigate to campaign detail. Show all campaigns (not just 8).
-- **Activity Summary card**: Total accounts targeted, contacts added, communications sent across all campaigns. Fetched via Supabase queries inside the component.
-- **Filtered Campaigns Table**: Replaces "Recent Campaigns" cards. Full table with columns: Name, Type, Status, MART, Accounts, Contacts, Start/End Date. All rows clickable. Responds to stat card / chart filters. Includes inline search.
+Restructure the form layout from the current 2-column grid to specific rows:
 
-**2. `src/pages/Campaigns.tsx`** (minor update)
-- Pass additional data to `CampaignDashboard` if needed, or let the dashboard fetch its own aggregate data internally.
+- **Row 1:** Account Name + Industry (2-col grid)
+- **Row 2:** Description (full width textarea)
+- **Row 3:** Website + Phone (2-col grid)
+- **Row 4:** Region + Country (2-col grid) — country selection auto-updates region via existing `countryToRegion` mapping. The existing `countryRegionMapping.ts` already has 200+ countries and 7 regions with proper sync.
+- **Row 5:** Company Type + Currency + Status (3-col grid)
 
-### Technical Details
-- Uses existing Recharts library (already imported in `chart.tsx`) via `ChartContainer`, `ChartTooltip`, `ChartTooltipContent`
-- Uses `PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer` from recharts
-- State: `statusFilter` and `typeFilter` managed locally in dashboard
-- All campaign rows navigate via `navigate(/campaigns/${id})`
-- Responsive grid: 5-col stats, 2-col charts, full-width table
-- No new dependencies needed
+### 4. Country/Region Filtering in Modal
+
+Add filtered country list based on selected region. When user selects a region first, only show countries from that region. When country is selected, auto-fill region (already working).
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `src/components/AccountTable.tsx` | Add description column to defaultColumns, add to searchFields |
+| `src/components/account-table/AccountTableBody.tsx` | Add description cell formatting, fix overflow with table-fixed layout, center Linked header |
+| `src/components/AccountModal.tsx` | Rearrange fields into 5 specific rows, add region-based country filtering |
 
