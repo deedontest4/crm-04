@@ -333,9 +333,32 @@ export function useCampaigns() {
   };
 }
 
-export function useCampaignDetail(campaignId: string | undefined) {
+export interface CampaignDetailEnabledTabs {
+  /** Overview tab needs accounts, contacts, communications */
+  overview?: boolean;
+  /** Setup tab needs accounts, contacts, email templates, phone scripts, materials */
+  setup?: boolean;
+  /** Monitoring tab needs communications + accounts/contacts for filters */
+  monitoring?: boolean;
+  /** Action items tab needs nothing extra */
+  actionItems?: boolean;
+}
+
+export function useCampaignDetail(
+  campaignId: string | undefined,
+  enabled: CampaignDetailEnabledTabs = { overview: true, setup: true, monitoring: true, actionItems: true }
+) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const baseEnabled = !!user && !!campaignId;
+  // Aggregate gates: which datasets need to be loaded based on which tabs are enabled
+  const needAccounts = baseEnabled && (enabled.overview || enabled.setup || enabled.monitoring);
+  const needContacts = baseEnabled && (enabled.overview || enabled.setup || enabled.monitoring);
+  const needCommunications = baseEnabled && (enabled.overview || enabled.monitoring);
+  const needEmailTemplates = baseEnabled && enabled.setup;
+  const needPhoneScripts = baseEnabled && enabled.setup;
+  const needMaterials = baseEnabled && enabled.setup;
 
   const campaignQuery = useQuery({
     queryKey: ["campaign", campaignId],
@@ -348,7 +371,7 @@ export function useCampaignDetail(campaignId: string | undefined) {
       if (error) throw error;
       return data as Campaign;
     },
-    enabled: !!user && !!campaignId,
+    enabled: baseEnabled,
   });
 
   // Strategy state from explicit table
@@ -363,7 +386,7 @@ export function useCampaignDetail(campaignId: string | undefined) {
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!campaignId,
+    enabled: baseEnabled,
   });
 
   const accountsQuery = useQuery({
@@ -376,7 +399,7 @@ export function useCampaignDetail(campaignId: string | undefined) {
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!campaignId,
+    enabled: needAccounts,
   });
 
   const contactsQuery = useQuery({
@@ -389,7 +412,7 @@ export function useCampaignDetail(campaignId: string | undefined) {
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!campaignId,
+    enabled: needContacts,
   });
 
   const communicationsQuery = useQuery({
@@ -403,7 +426,7 @@ export function useCampaignDetail(campaignId: string | undefined) {
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!campaignId,
+    enabled: needCommunications,
   });
 
   const emailTemplatesQuery = useQuery({
@@ -416,7 +439,7 @@ export function useCampaignDetail(campaignId: string | undefined) {
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!campaignId,
+    enabled: needEmailTemplates,
   });
 
   const phoneScriptsQuery = useQuery({
@@ -429,7 +452,7 @@ export function useCampaignDetail(campaignId: string | undefined) {
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!campaignId,
+    enabled: needPhoneScripts,
   });
 
   const materialsQuery = useQuery({
@@ -442,7 +465,7 @@ export function useCampaignDetail(campaignId: string | undefined) {
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!campaignId,
+    enabled: needMaterials,
   });
 
   // Strategy completion from explicit flags

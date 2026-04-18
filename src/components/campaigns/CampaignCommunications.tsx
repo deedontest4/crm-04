@@ -58,8 +58,9 @@ export function CampaignCommunications({ campaignId, isCampaignEnded }: Props) {
   const [outreachTab, setOutreachTab] = useState<OutreachTab>("all");
   const [syncingReplies, setSyncingReplies] = useState(false);
 
-  // Auto-poll for email replies every 60 seconds
+  // Auto-poll for email replies — only when tab is visible, every 2 minutes
   const syncReplies = useCallback(async () => {
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
     try {
       await supabase.functions.invoke("check-email-replies");
       queryClient.invalidateQueries({ queryKey: ["campaign-communications", campaignId] });
@@ -69,10 +70,18 @@ export function CampaignCommunications({ campaignId, isCampaignEnded }: Props) {
   }, [campaignId, queryClient]);
 
   useEffect(() => {
-    // Initial sync on mount
+    // Initial sync on mount (only if visible)
     syncReplies();
-    const interval = setInterval(syncReplies, 60_000);
-    return () => clearInterval(interval);
+    const interval = setInterval(syncReplies, 120_000);
+    // Re-sync when tab becomes visible again
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") syncReplies();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [syncReplies]);
 
   const { data: communications = [], refetch } = useQuery({
