@@ -261,27 +261,29 @@ export default function CampaignDetail() {
             </TabsContent>
 
             <TabsContent value="setup" className="mt-0">
-              <CampaignStrategy
-                campaignId={campaign.id}
-                campaign={campaign}
-                isStrategyComplete={isStrategyComplete}
-                updateStrategyFlag={detail.updateStrategyFlag}
-                isCampaignEnded={isCampaignEnded}
-                daysRemaining={daysRemaining}
-                timingNotes={detail.strategy?.timing_notes}
-                campaignName={campaign.campaign_name}
-                campaignOwner={campaign.owner}
-                endDate={campaign.end_date}
-                contentCounts={{
-                  emailTemplateCount: detail.emailTemplates.filter(t => t.email_type !== "LinkedIn-Connection" && t.email_type !== "LinkedIn-Followup").length,
-                  phoneScriptCount: detail.phoneScripts.length,
-                  linkedinTemplateCount: detail.emailTemplates.filter(t => t.email_type === "LinkedIn-Connection" || t.email_type === "LinkedIn-Followup").length,
-                  materialCount: detail.materials.length,
-                  regionCount: (() => { try { const arr = JSON.parse(campaign.region || ""); return Array.isArray(arr) ? arr.length : 0; } catch { return campaign.region ? 1 : 0; } })(),
-                  accountCount: detail.accounts.length,
-                  contactCount: detail.contacts.length,
-                }}
-              />
+              <Suspense fallback={<TabFallback />}>
+                <CampaignStrategy
+                  campaignId={campaign.id}
+                  campaign={campaign}
+                  isStrategyComplete={isStrategyComplete}
+                  updateStrategyFlag={detail.updateStrategyFlag}
+                  isCampaignEnded={isCampaignEnded}
+                  daysRemaining={daysRemaining}
+                  timingNotes={detail.strategy?.timing_notes}
+                  campaignName={campaign.campaign_name}
+                  campaignOwner={campaign.owner}
+                  endDate={campaign.end_date}
+                  contentCounts={{
+                    emailTemplateCount: detail.emailTemplates.filter(t => t.email_type !== "LinkedIn-Connection" && t.email_type !== "LinkedIn-Followup").length,
+                    phoneScriptCount: detail.phoneScripts.length,
+                    linkedinTemplateCount: detail.emailTemplates.filter(t => t.email_type === "LinkedIn-Connection" || t.email_type === "LinkedIn-Followup").length,
+                    materialCount: detail.materials.length,
+                    regionCount: (() => { try { const arr = JSON.parse(campaign.region || ""); return Array.isArray(arr) ? arr.length : 0; } catch { return campaign.region ? 1 : 0; } })(),
+                    accountCount: detail.accounts.length,
+                    contactCount: detail.contacts.length,
+                  }}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="monitoring" className="mt-0">
@@ -291,16 +293,22 @@ export default function CampaignDetail() {
                   <TabsTrigger value="analytics" className="text-xs h-7">Analytics</TabsTrigger>
                 </TabsList>
                 <TabsContent value="outreach" className="mt-0">
-                  <CampaignCommunications campaignId={campaign.id} isCampaignEnded={isCampaignEnded} />
+                  <Suspense fallback={<TabFallback />}>
+                    <CampaignCommunications campaignId={campaign.id} isCampaignEnded={isCampaignEnded} />
+                  </Suspense>
                 </TabsContent>
                 <TabsContent value="analytics" className="mt-0">
-                  <CampaignAnalytics campaignId={campaign.id} />
+                  <Suspense fallback={<TabFallback />}>
+                    <CampaignAnalytics campaignId={campaign.id} />
+                  </Suspense>
                 </TabsContent>
               </Tabs>
             </TabsContent>
 
             <TabsContent value="actionItems" className="mt-0">
-              <CampaignActionItems campaignId={campaign.id} />
+              <Suspense fallback={<TabFallback />}>
+                <CampaignActionItems campaignId={campaign.id} />
+              </Suspense>
             </TabsContent>
           </div>
         </Tabs>
