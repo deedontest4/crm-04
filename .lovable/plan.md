@@ -1,64 +1,69 @@
 
 
-## Improve /campaigns Dashboard
+## Performance Investigation: Findings & Plan
 
-### Current Bugs & Issues Found
-1. **Activity Summary card too wide** — takes 8/12 columns but only shows 3 small stat rows; pie chart cramped at 4/12.
-2. **Stats use `campaigns` (filtered to active) but the count badge in header shows `campaigns.length`** — both exclude archived; that's fine, but stat cards say "Total" which is misleading. Should be "Total Active".
-3. **Communication count is undifferentiated** — 22 comms exist split across Email/Call/Phone/LinkedIn but dashboard shows one number, losing channel insight.
-4. **No time-based insight** — no trend of campaigns created over months, no upcoming/ending soon view.
-5. **No engagement metrics** — email replied/sent/failed counts exist in `campaign_communications.email_status` but not surfaced.
-6. **No top-performing campaigns** — table shows all 8 unsorted; missing "by activity" or "by reply rate".
-7. **Aggregates re-fetched only on `campaigns.length` change** — won't refresh when comms/accounts added; should use react-query for cache invalidation consistency.
-8. **Pie chart click filter only filters the table — stat card "Total" highlight logic is buggy** (always shows ring when no filter).
-9. **Strategy column** in dashboard table doesn't visually convey progress (just "0/4" text) — should be a tiny progress bar.
-10. **No "ending soon" / "overdue" alerts** — campaigns past `end_date` but still Active aren't flagged.
+I deep-checked the app and found several concrete causes of slow page loads. None are bundle-size issues (lazy loading + chunking is already in place). The real bottlenecks are **excessive serial network requests**, **fetching full tables when only counts are needed**, and **wasteful polling/refetching**.
 
-### Proposed Layout (12-col grid)
+### Root Causes Found
 
-```text
-[Stat Cards: Total | Active | Draft | Completed | Paused]   (5 small cards)
+**1. CampaignDashboard fetches 3 entire tables on every visit (`CampaignDashboard.tsx` lines 104–156)**
+- Pulls all rows from `campaign_accounts`, `campaign_contacts`, `campaign_communications` to compute counts client-side.
+- For a CRM with thousands of records, this is the #1 reason `/campaigns` and `/` are slow.
+- Fix: Replace with a single Supabase RPC (or 3 `head:true, count:exact` queries) that returns aggregates server-side.
 
-[Status Pie 3] [Channel Mix Bar 3] [Email Engagement 3] [Quick Stats 3]
-   donut          horiz bars         donut + numbers       4 mini stats:
-                                                             Accounts / Contacts
-                                                             Comms / Avg per camp
+**2. CampaignDetail issues 7+ parallel queries on mount (`useCampaigns.tsx` lines 340–447)**
+- campaign, strategy, accounts, contacts, communications, email-templates, phone-scripts, materials — all fired on page open even though most tabs aren't visible.
+- Fix: Only fetch the data needed for the **active tab**. Lazy-load tab content (Setup, Outreach, Analytics, Action Items) so their queries don't run until the tab is opened.
 
-[Campaigns Timeline 6]              [Top Active Campaigns 6]
-   Bar chart: created per month       List sorted by communications count
-                                       with mini progress + reply rate
+**3. CampaignAnalytics & CampaignOverview each refetch the same 4 tables (`CampaignAnalytics.tsx` 51–85, `CampaignOverview.tsx`)**
+- Same query keys are used, so the cache helps, but each component still subscribes and triggers re-renders.
+- Fix: Hoist queries into the parent (`CampaignDetail`) and pass via props — eliminates duplicate subscriptions.
 
-[All Campaigns Table — full width]
-   Existing table + new "Engagement" column (replies/sent),
-   Strategy as mini progress bar, sortable headers
-```
+**4. `setInterval` polling every 60s in CampaignCommunications (`CampaignCommunications.tsx` line 74)**
+- Calls the `check-email-replies` edge function and invalidates queries every minute, even when the user is on another tab.
+- Fix: Only poll when the Outreach tab is mounted AND the document is visible (`document.visibilityState === 'visible'`). Increase interval to 2 minutes.
 
-### Changes to `src/components/campaigns/CampaignDashboard.tsx`
+**5. DealsPage loads ALL deals at once with no pagination (`DealsPage.tsx` lines 35–61)**
+- Loops `range(0,999)` until exhausted — slow for large datasets, blocks first paint.
+- Plus an always-on real-time subscription that re-renders on every change.
+- Fix: For Kanban view limit to ~500 most recent + load more on scroll. For List view use server-side pagination (already exists in `fetchPaginatedData`).
 
-**Add new aggregates fetched once**:
-- `commsBycamp` split by `communication_type` (Email/Call/Phone/LinkedIn)
-- `emailStatusCounts` (Sent / Replied / Failed) globally
-- `repliesBycamp` (count where `email_status='Replied'`)
-- `createdByMonth` derived from campaigns
+**6. CampaignDashboardWidget on Dashboard fetches campaigns + ALL campaign_contacts (`CampaignDashboardWidget.tsx` lines 17–58)**
+- Same anti-pattern as #1: fetches every contact row to compute response rates.
+- Fix: Use grouped count query or RPC.
 
-**New widgets**:
-1. **Channel Mix** (horizontal bar chart): Email vs Call vs Phone vs LinkedIn comms.
-2. **Email Engagement** (compact donut + numbers): Sent / Replied / Failed with reply-rate %.
-3. **Quick Stats** (2x2 grid): Accounts Targeted, Contacts Added, Total Comms, Avg Comms/Campaign.
-4. **Campaign Timeline** (bar chart): campaigns created per month over last 6 months.
-5. **Top Active Campaigns** (sorted list): top 5 by communication count, each row shows name, comms count, reply rate, mini MART progress.
+**7. Accounts page has an extra `useEffect` querying ALL `account_owner` values (`Accounts.tsx` lines 32–41)**
+- Fires on every refresh trigger; no cache.
+- Fix: Wrap in `useQuery` with `staleTime: 5min`.
 
-**Bug fixes**:
-- Replace single broad "Activity Summary" with the 4-tile row above (fixes width issue).
-- Fix "Total" ring logic: only highlight when explicitly clicked, not by default.
-- Add ending-soon banner if any active campaign has `end_date` within 7 days or past due.
-- Add Strategy mini progress bar in table.
-- Add "Engagement" column to table (e.g. `5/16 replies`).
-- Switch aggregate `useEffect` to a `useQuery` keyed on `["campaign-aggregates"]` so it invalidates with other campaign mutations.
+**8. Vite manualChunks misses `@hello-pangea/dnd`, `date-fns`, `@tanstack/react-query`**
+- These are large and bundled into the main entry.
+- Fix: Add explicit chunks for `dnd`, `query`, `dates`.
 
-### File
+### Plan of Changes
 
-| File | Action |
-|---|---|
-| `src/components/campaigns/CampaignDashboard.tsx` | Rewrite layout: 4-tile chart row + timeline + top campaigns + improved table |
+**Backend (1 migration)**
+- Create RPC `get_campaign_aggregates()` returning per-campaign account/contact/communication counts and channel/status breakdown in one query.
+- Create RPC `get_campaign_widget_stats()` for the Dashboard widget.
+
+**Frontend**
+1. **`CampaignDashboard.tsx`** — replace 3 full-table fetches with `get_campaign_aggregates` RPC.
+2. **`CampaignDashboardWidget.tsx`** — use `get_campaign_widget_stats` RPC.
+3. **`CampaignDetail.tsx`** — lazy-load tab components (`React.lazy` + `Suspense`) so Setup/Monitoring/Action-Items code & queries don't run until clicked.
+4. **`useCampaigns.tsx` (`useCampaignDetail`)** — gate `accountsQuery`, `contactsQuery`, `communicationsQuery`, `emailTemplatesQuery`, `phoneScriptsQuery`, `materialsQuery` behind an `enabledTabs` parameter so non-visible tabs don't fetch.
+5. **`CampaignAnalytics.tsx` / `CampaignOverview.tsx`** — accept data via props from parent instead of duplicating queries.
+6. **`CampaignCommunications.tsx`** — gate polling: skip when `document.hidden`, increase interval to 120s, only run when component mounted.
+7. **`DealsPage.tsx`** — add a 500-row initial fetch with "Load More" for Kanban; rely on existing pagination for List view. Disable real-time subscription when tab hidden.
+8. **`Accounts.tsx`** — convert ad-hoc owner fetch to `useQuery` with cache.
+9. **`vite.config.ts`** — add `dnd`, `query`, `dates` chunks for better cache hits.
+
+### Expected Impact
+- Campaigns dashboard: ~3 seconds → ~300 ms (one RPC vs three full table scans).
+- Campaign detail: ~2 seconds → ~500 ms (1 query instead of 7).
+- Deals page: large dataset load deferred until scrolled.
+- Notification polling no longer fires when tab is backgrounded.
+
+### Out of Scope
+- No UI/visual changes — purely performance.
+- No data shape changes — RPCs return the same totals existing components already compute.
 
