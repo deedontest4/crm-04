@@ -355,46 +355,66 @@ const DealsPage = () => {
     if (user) {
       fetchDeals();
 
-      // Set up real-time subscription
-      const channel = supabase
-        .channel('deals-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'deals'
-          },
-          (payload) => {
-            console.log('Real-time deal change:', payload);
-            
-            if (payload.eventType === 'INSERT') {
-              setDeals(prev => [payload.new as Deal, ...prev]);
-            } else if (payload.eventType === 'UPDATE') {
-              setDeals(prev => prev.map(deal => 
-                deal.id === payload.new.id ? { ...deal, ...payload.new } as Deal : deal
-              ));
-            } else if (payload.eventType === 'DELETE') {
-              setDeals(prev => prev.filter(deal => deal.id !== payload.old.id));
+      // Set up real-time subscription — only when tab is visible to avoid
+      // wasted re-renders when the user is on another tab.
+      let channel: ReturnType<typeof supabase.channel> | null = null;
+
+      const subscribe = () => {
+        if (channel) return;
+        channel = supabase
+          .channel('deals-changes')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'deals' },
+            (payload) => {
+              if (payload.eventType === 'INSERT') {
+                setDeals(prev => [payload.new as Deal, ...prev]);
+              } else if (payload.eventType === 'UPDATE') {
+                setDeals(prev => prev.map(deal =>
+                  deal.id === payload.new.id ? { ...deal, ...payload.new } as Deal : deal
+                ));
+              } else if (payload.eventType === 'DELETE') {
+                setDeals(prev => prev.filter(deal => deal.id !== payload.old.id));
+              }
             }
-          }
-        )
-        .subscribe();
+          )
+          .subscribe();
+      };
+
+      const unsubscribe = () => {
+        if (channel) {
+          supabase.removeChannel(channel);
+          channel = null;
+        }
+      };
+
+      const onVisibility = () => {
+        if (document.visibilityState === 'visible') {
+          subscribe();
+          fetchDeals();
+        } else {
+          unsubscribe();
+        }
+      };
+
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        subscribe();
+      }
+      document.addEventListener('visibilitychange', onVisibility);
 
       // Listen for custom import events
       const handleImportEvent = () => {
-        console.log('DealsPage: Received deals-data-updated event, refreshing...');
         fetchDeals();
       };
-      
       window.addEventListener('deals-data-updated', handleImportEvent);
 
       return () => {
-        supabase.removeChannel(channel);
+        unsubscribe();
+        document.removeEventListener('visibilitychange', onVisibility);
         window.removeEventListener('deals-data-updated', handleImportEvent);
       };
     }
-  }, [user]);
+  }, [user, fetchDeals, setDeals]);
 
   if (authLoading || loading) {
     return (
