@@ -25,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useUserDisplayNames } from "@/hooks/useUserDisplayNames";
+import { expandRegionsForDb } from "@/utils/countryRegionMapping";
 
 interface Props {
   campaignId: string;
@@ -32,6 +33,8 @@ interface Props {
   campaignName?: string;
   campaignOwner?: string | null;
   endDate?: string | null;
+  compact?: boolean;
+  selectedRegions?: string[];
 }
 
 const statusColors: Record<string, string> = {
@@ -83,7 +86,7 @@ async function fetchAllContacts() {
   return allData;
 }
 
-export function CampaignAccountsContacts({ campaignId, isCampaignEnded, campaignName, campaignOwner, endDate }: Props) {
+export function CampaignAccountsContacts({ campaignId, isCampaignEnded, campaignName, campaignOwner, endDate, compact = false, selectedRegions = [] }: Props) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -182,18 +185,20 @@ export function CampaignAccountsContacts({ campaignId, isCampaignEnded, campaign
     },
   });
 
-  // All accounts for add modal
+  // All accounts for add modal — server-side filter by selectedRegions when provided
   const { data: allAccounts = [] } = useQuery({
-    queryKey: ["all-accounts"],
+    queryKey: ["all-accounts", selectedRegions.join(",")],
     queryFn: async () => {
-      const { data, error } = await supabase.from("accounts").select("id, account_name, industry, region, country");
+      let q = supabase.from("accounts").select("id, account_name, industry, region, country");
+      if (selectedRegions.length > 0) q = q.in("region", expandRegionsForDb(selectedRegions));
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
     enabled: addAccountModalOpen,
   });
 
-  // All contacts - paginated fetch
+  // All contacts - paginated fetch (filter client-side by linked-account region after fetch)
   const { data: allContacts = [] } = useQuery({
     queryKey: ["all-contacts-paginated"],
     queryFn: fetchAllContacts,
@@ -397,7 +402,7 @@ export function CampaignAccountsContacts({ campaignId, isCampaignEnded, campaign
     }
     const regularTemplates = emailTemplates.filter((t) => t.email_type !== "LinkedIn-Connection" && t.email_type !== "LinkedIn-Followup");
     if (regularTemplates.length === 0) {
-      toast({ title: "No templates", description: "Add email templates in MART → Message first.", variant: "destructive" });
+      toast({ title: "No templates", description: "Add email templates in Setup → Message first.", variant: "destructive" });
       return;
     }
     setSlideContact(cc);

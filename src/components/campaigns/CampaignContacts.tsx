@@ -246,7 +246,7 @@ export function CampaignContacts({ campaignId, isCampaignEnded, campaignName, ca
     if (isCampaignEnded) { toast({ title: "Campaign ended", description: "Outreach is closed.", variant: "destructive" }); return; }
     const regularTemplates = emailTemplates.filter((t) => t.email_type !== "LinkedIn-Connection" && t.email_type !== "LinkedIn-Followup");
     if (regularTemplates.length === 0) {
-      toast({ title: "No templates", description: "Add email templates in MART → Message first.", variant: "destructive" });
+      toast({ title: "No templates", description: "Add email templates in Setup → Message first.", variant: "destructive" });
       return;
     }
     setSlideContact(cc);

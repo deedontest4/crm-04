@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Clock, AlertTriangle, CheckCircle2, Circle, ChevronDown, Trash2, Copy, Archive } from "lucide-react";
+import { AlertTriangle, ChevronDown, Trash2, Copy, Archive, Pencil, MoreHorizontal } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,8 +20,7 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { CampaignModal } from "@/components/campaigns/CampaignModal";
-import { CampaignMARTStrategy } from "@/components/campaigns/CampaignMARTStrategy";
-import { CampaignAccountsContacts } from "@/components/campaigns/CampaignAccountsContacts";
+import { CampaignStrategy } from "@/components/campaigns/CampaignStrategy";
 import { CampaignCommunications } from "@/components/campaigns/CampaignCommunications";
 import { CampaignAnalytics } from "@/components/campaigns/CampaignAnalytics";
 import { CampaignActionItems } from "@/components/campaigns/CampaignActionItems";
@@ -121,7 +120,7 @@ export default function CampaignDetail() {
     );
   }
 
-  const { campaign, isMARTComplete, martProgress, isFullyMARTComplete, isCampaignEnded, daysRemaining } = detail;
+  const { campaign, isStrategyComplete, strategyProgress, isFullyStrategyComplete, isCampaignEnded, daysRemaining } = detail;
 
   // Status transition rules
   const handleStatusChange = (newStatus: string) => {
@@ -133,9 +132,9 @@ export default function CampaignDetail() {
       return;
     }
 
-    // MART gate for Active
-    if (newStatus === "Active" && !isFullyMARTComplete) {
-      toast.error("Complete all 4 MART sections before activating this campaign.");
+    // Strategy gate for Active
+    if (newStatus === "Active" && !isFullyStrategyComplete) {
+      toast.error("Complete all 4 Strategy sections before activating this campaign.");
       return;
     }
 
@@ -146,7 +145,7 @@ export default function CampaignDetail() {
     const current = campaign.status || "Draft";
     if (current === "Completed") return [];
     const statuses = ["Draft", "Paused", "Completed"];
-    if (isFullyMARTComplete) statuses.splice(1, 0, "Active");
+    if (isFullyStrategyComplete) statuses.splice(1, 0, "Active");
     return statuses.filter((s) => s !== current);
   };
 
@@ -156,8 +155,8 @@ export default function CampaignDetail() {
       <div className="flex-shrink-0 h-16 px-6 border-b bg-background flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <div className="min-w-0">
-            <h1 className="text-lg font-semibold text-foreground truncate">{campaign.campaign_name}</h1>
-            <p className="text-xs text-muted-foreground truncate">
+            <h1 className="text-xl font-semibold text-foreground truncate">{campaign.campaign_name}</h1>
+            <p className="text-sm text-muted-foreground truncate">
               {campaign.campaign_type} · Owner: {campaign.owner ? displayNames[campaign.owner] || "—" : "—"}
               {campaign.start_date && campaign.end_date && (
                 <> · {format(new Date(campaign.start_date + "T00:00:00"), "dd MMM yyyy")} → {format(new Date(campaign.end_date + "T00:00:00"), "dd MMM yyyy")}</>
@@ -166,14 +165,10 @@ export default function CampaignDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {/* MART pills — compact inline */}
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1">
-                <Badge className={statusColors[campaign.status || "Draft"]} variant="secondary">
-                  {campaign.status || "Draft"}
-                </Badge>
+              <Button size="sm" className={`gap-1 border ${statusColors[campaign.status || "Draft"]} hover:opacity-90`}>
+                {campaign.status || "Draft"}
                 {campaign.status !== "Completed" && <ChevronDown className="h-3 w-3" />}
               </Button>
             </DropdownMenuTrigger>
@@ -195,98 +190,100 @@ export default function CampaignDetail() {
               <AlertTriangle className="h-3 w-3" /> Ended
             </Badge>
           )}
-          {daysRemaining !== null && daysRemaining > 0 && !isCampaignEnded && (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Clock className="h-3 w-3" /> {daysRemaining}d left
-            </Badge>
-          )}
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>Edit</Button>
-          <Button variant="outline" size="sm" onClick={() => cloneCampaign.mutateAsync(campaign.id).then((newId) => { if (newId) { const slug = (campaign.campaign_name + " (Copy)").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); navigate(`/campaigns/${slug}`); } })}>
-            <Copy className="h-3.5 w-3.5 mr-1" /> Clone
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setArchiveOpen(true)}>
-            <Archive className="h-3.5 w-3.5 mr-1" /> Archive
-          </Button>
-          <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
-            <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1">
+                <MoreHorizontal className="h-3.5 w-3.5" /> Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => cloneCampaign.mutateAsync(campaign.id).then((newId) => { if (newId) { const slug = (campaign.campaign_name + " (Copy)").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); navigate(`/campaigns/${slug}`); } })}>
+                <Copy className="h-3.5 w-3.5 mr-2" /> Clone
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setArchiveOpen(true)}>
+                <Archive className="h-3.5 w-3.5 mr-2" /> Archive
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDeleteOpen(true)} className="text-destructive focus:text-destructive">
+                <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {/* Campaign ended warning */}
-      {isCampaignEnded && (
-        <div className="mx-6 mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2 text-destructive text-sm">
-          <AlertTriangle className="h-4 w-4" />
-          This campaign ended on {campaign.end_date}. Outreach is closed.
-        </div>
-      )}
-
-      {/* 7 Tabs per spec */}
-      <div className="flex-1 overflow-hidden px-4 pt-3 pb-4">
+      {/* 4 Tabs */}
+      <div className="flex-1 overflow-hidden px-6 pt-3 pb-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <div className="overflow-x-auto">
-            <TabsList className="w-full grid grid-cols-6">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="mart">MART Strategy</TabsTrigger>
-              <TabsTrigger value="accounts-contacts">Accounts & Contacts</TabsTrigger>
-              <TabsTrigger value="outreach">Outreach</TabsTrigger>
-              <TabsTrigger value="tasks">Tasks</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList className="w-full grid grid-cols-4 h-10">
+            <TabsTrigger value="overview" className="text-sm h-9">Overview</TabsTrigger>
+            <TabsTrigger value="setup" className="text-sm h-9">Setup</TabsTrigger>
+            <TabsTrigger value="monitoring" className="text-sm h-9">Monitoring</TabsTrigger>
+            <TabsTrigger value="actionItems" className="text-sm h-9">Action Items</TabsTrigger>
+          </TabsList>
 
-          <div className="flex-1 overflow-auto mt-4">
-            {/* Overview */}
+          <div className="flex-1 overflow-auto mt-3">
             <TabsContent value="overview" className="mt-0">
               <CampaignOverview
                 campaign={campaign}
                 accounts={detail.accounts}
                 contacts={detail.contacts}
                 communications={detail.communications}
-                isMARTComplete={isMARTComplete}
-                martProgress={martProgress}
+                isStrategyComplete={isStrategyComplete}
+                strategyProgress={strategyProgress}
                 onTabChange={setActiveTab}
               />
             </TabsContent>
 
-            {/* MART Strategy — unified tab */}
-            <TabsContent value="mart" className="mt-0">
-              <CampaignMARTStrategy
+            <TabsContent value="setup" className="mt-0">
+              <CampaignStrategy
                 campaignId={campaign.id}
                 campaign={campaign}
-                isMARTComplete={isMARTComplete}
-                updateMartFlag={detail.updateMartFlag}
+                isStrategyComplete={isStrategyComplete}
+                updateStrategyFlag={detail.updateStrategyFlag}
                 isCampaignEnded={isCampaignEnded}
                 daysRemaining={daysRemaining}
-                timingNotes={detail.mart?.timing_notes}
+                timingNotes={detail.strategy?.timing_notes}
+                campaignName={campaign.campaign_name}
+                campaignOwner={campaign.owner}
+                endDate={campaign.end_date}
                 contentCounts={{
                   emailTemplateCount: detail.emailTemplates.filter(t => t.email_type !== "LinkedIn-Connection" && t.email_type !== "LinkedIn-Followup").length,
                   phoneScriptCount: detail.phoneScripts.length,
                   linkedinTemplateCount: detail.emailTemplates.filter(t => t.email_type === "LinkedIn-Connection" || t.email_type === "LinkedIn-Followup").length,
                   materialCount: detail.materials.length,
                   regionCount: (() => { try { const arr = JSON.parse(campaign.region || ""); return Array.isArray(arr) ? arr.length : 0; } catch { return campaign.region ? 1 : 0; } })(),
-                  hasAudienceData: (() => { try { const p = JSON.parse(campaign.target_audience || ""); return !!(p.job_titles?.length || p.departments?.length || p.seniorities?.length || p.industries?.length || p.company_sizes?.length); } catch { return false; } })(),
+                  accountCount: detail.accounts.length,
+                  contactCount: detail.contacts.length,
                 }}
               />
             </TabsContent>
 
-            <TabsContent value="accounts-contacts" className="mt-0">
-              <CampaignAccountsContacts campaignId={campaign.id} isCampaignEnded={isCampaignEnded} campaignName={campaign.campaign_name} campaignOwner={campaign.owner} endDate={campaign.end_date} />
+            <TabsContent value="monitoring" className="mt-0">
+              <Tabs defaultValue="outreach" className="w-full">
+                <TabsList className="h-8 mb-3">
+                  <TabsTrigger value="outreach" className="text-xs h-7">Outreach</TabsTrigger>
+                  <TabsTrigger value="analytics" className="text-xs h-7">Analytics</TabsTrigger>
+                </TabsList>
+                <TabsContent value="outreach" className="mt-0">
+                  <CampaignCommunications campaignId={campaign.id} isCampaignEnded={isCampaignEnded} />
+                </TabsContent>
+                <TabsContent value="analytics" className="mt-0">
+                  <CampaignAnalytics campaignId={campaign.id} />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
-            <TabsContent value="outreach" className="mt-0">
-              <CampaignCommunications campaignId={campaign.id} isCampaignEnded={isCampaignEnded} />
-            </TabsContent>
-            <TabsContent value="tasks" className="mt-0">
+
+            <TabsContent value="actionItems" className="mt-0">
               <CampaignActionItems campaignId={campaign.id} />
-            </TabsContent>
-            <TabsContent value="analytics" className="mt-0">
-              <CampaignAnalytics campaignId={campaign.id} />
             </TabsContent>
           </div>
         </Tabs>
       </div>
 
-      <CampaignModal open={editOpen} onClose={() => setEditOpen(false)} campaign={campaign} isMARTComplete={isFullyMARTComplete} />
+      <CampaignModal open={editOpen} onClose={() => setEditOpen(false)} campaign={campaign} isStrategyComplete={isFullyStrategyComplete} />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
