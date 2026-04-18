@@ -433,29 +433,35 @@ const DealsPage = () => {
 
   const headerActions = (
     <div className="flex items-center gap-2">
-      <ToggleGroup 
-        type="single" 
-        value={activeView} 
+      <ToggleGroup
+        type="single"
+        value={activeView}
         onValueChange={(value) => value && setActiveView(value as 'kanban' | 'list')}
         className="border rounded-lg p-0.5 bg-muted/50"
       >
-        <ToggleGroupItem 
-          value="kanban" 
-          aria-label="Kanban view" 
+        <ToggleGroupItem
+          value="kanban"
+          aria-label="Kanban view"
           className="px-3 h-8 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm rounded-md"
         >
           <LayoutGrid className="h-4 w-4 mr-1" />
           Kanban
         </ToggleGroupItem>
-        <ToggleGroupItem 
-          value="list" 
-          aria-label="List view" 
+        <ToggleGroupItem
+          value="list"
+          aria-label="List view"
           className="px-3 h-8 text-sm data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm rounded-md"
         >
           <List className="h-4 w-4 mr-1" />
           List
         </ToggleGroupItem>
       </ToggleGroup>
+
+      {hasMore && activeView === 'kanban' && (
+        <Button variant="outline" size="sm" onClick={() => setLoadAll(true)}>
+          Load all deals
+        </Button>
+      )}
 
       <Button onClick={() => handleCreateDeal('Lead')}>
         <Plus className="w-4 h-4 mr-2" />
