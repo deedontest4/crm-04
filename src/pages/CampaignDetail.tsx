@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useCampaignDetail, useCampaigns } from "@/hooks/useCampaigns";
+import { useCampaignDetail, useCampaigns, type CampaignDetailEnabledTabs } from "@/hooks/useCampaigns";
 import { useUserDisplayNames } from "@/hooks/useUserDisplayNames";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,11 +20,28 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { CampaignModal } from "@/components/campaigns/CampaignModal";
-import { CampaignStrategy } from "@/components/campaigns/CampaignStrategy";
-import { CampaignCommunications } from "@/components/campaigns/CampaignCommunications";
-import { CampaignAnalytics } from "@/components/campaigns/CampaignAnalytics";
-import { CampaignActionItems } from "@/components/campaigns/CampaignActionItems";
 import { CampaignOverview } from "@/components/campaigns/CampaignOverview";
+
+// Lazy-load heavy tab content so its code & queries don't run until the tab is opened
+const CampaignStrategy = lazy(() =>
+  import("@/components/campaigns/CampaignStrategy").then((m) => ({ default: m.CampaignStrategy }))
+);
+const CampaignCommunications = lazy(() =>
+  import("@/components/campaigns/CampaignCommunications").then((m) => ({ default: m.CampaignCommunications }))
+);
+const CampaignAnalytics = lazy(() =>
+  import("@/components/campaigns/CampaignAnalytics").then((m) => ({ default: m.CampaignAnalytics }))
+);
+const CampaignActionItems = lazy(() =>
+  import("@/components/campaigns/CampaignActionItems").then((m) => ({ default: m.CampaignActionItems }))
+);
+
+const TabFallback = () => (
+  <div className="space-y-3 py-2">
+    <div className="h-24 rounded-lg bg-muted animate-pulse" />
+    <div className="h-48 rounded-lg bg-muted animate-pulse" />
+  </div>
+);
 
 const statusColors: Record<string, string> = {
   Draft: "bg-muted text-muted-foreground",
