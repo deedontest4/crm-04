@@ -31,19 +31,32 @@ const DealsPage = () => {
   const [initialStage, setInitialStage] = useState<DealStage>('Lead');
   const [activeView, setActiveView] = useState<'kanban' | 'list'>('kanban');
 
-  // Cached deals query — paginates internally to bypass 1000-row supabase limit
+  // Initial fetch is capped to KANBAN_LIMIT most-recent deals so first paint is fast.
+  // The "Load all" button below pulls the rest in 1000-row batches when needed
+  // (e.g. a user with thousands of historical deals scrolling further).
+  const KANBAN_LIMIT = 500;
+  const [loadAll, setLoadAll] = useState(false);
+
   const dealsQuery = useQuery({
-    queryKey: ['deals-all'],
+    queryKey: ['deals-all', loadAll],
     enabled: !!user,
     staleTime: 2 * 60 * 1000,
     queryFn: async (): Promise<Deal[]> => {
+      // Fast path: only the most recent KANBAN_LIMIT rows for initial paint
+      if (!loadAll) {
+        const { data, error } = await supabase
+          .from('deals')
+          .select('*')
+          .order('modified_at', { ascending: false })
+          .range(0, KANBAN_LIMIT - 1);
+        if (error) throw error;
+        return (data || []) as unknown as Deal[];
+      }
+
+      // Full load (paginated to bypass the 1000-row supabase limit)
       const PAGE = 1000;
       let from = 0;
       const all: Deal[] = [];
-      // Loop until fewer than PAGE rows returned
-      // Using select('*') here keeps full deal objects (modal needs them); narrowing
-      // is best done at view-level. This is now cached for 2 min via React Query.
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const { data, error } = await supabase
           .from('deals')
@@ -62,6 +75,7 @@ const DealsPage = () => {
 
   const deals = dealsQuery.data || [];
   const loading = dealsQuery.isLoading;
+  const hasMore = !loadAll && deals.length >= KANBAN_LIMIT;
 
   const fetchDeals = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ['deals-all'] });
@@ -70,9 +84,9 @@ const DealsPage = () => {
   // Local helper to update deals cache without refetching
   const setDeals = useCallback(
     (updater: (prev: Deal[]) => Deal[]) => {
-      queryClient.setQueryData<Deal[]>(['deals-all'], (prev) => updater(prev || []));
+      queryClient.setQueryData<Deal[]>(['deals-all', loadAll], (prev) => updater(prev || []));
     },
-    [queryClient]
+    [queryClient, loadAll]
   );
 
   const handleUpdateDeal = async (dealId: string, updates: Partial<Deal>) => {
