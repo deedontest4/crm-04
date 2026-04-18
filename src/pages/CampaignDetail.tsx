@@ -73,12 +73,14 @@ export default function CampaignDetail() {
     return extractedId;
   }, [extractedId, isDirectUUID, rawId, campaigns]);
 
-  const detail = useCampaignDetail(id, useMemo<CampaignDetailEnabledTabs>(() => ({
+  const [activeTab, setActiveTab] = useState("overview");
+  const enabledTabs = useMemo<CampaignDetailEnabledTabs>(() => ({
     overview: true, // always needed for the default landing tab
     setup: activeTab === "setup",
     monitoring: activeTab === "monitoring",
     actionItems: activeTab === "actionItems",
-  }), [activeTab]));
+  }), [activeTab]);
+  const detail = useCampaignDetail(id, enabledTabs);
   const { updateCampaign, deleteCampaign, archiveCampaign, cloneCampaign } = useCampaigns();
   const ownerIds = useMemo(() => [detail.campaign?.owner].filter(Boolean) as string[], [detail.campaign?.owner]);
   const { displayNames } = useUserDisplayNames(ownerIds);
