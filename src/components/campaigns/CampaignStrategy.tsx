@@ -178,14 +178,14 @@ export function CampaignStrategy({ campaignId, campaign, isStrategyComplete, upd
           return (
             <Collapsible key={section.key} open={isOpen} onOpenChange={() => toggleSection(section.key)}>
               <CollapsibleTrigger asChild>
-                <div className="py-2 px-3 cursor-pointer hover:bg-muted/30 transition-colors">
+                <div className={`py-2 px-3 cursor-pointer transition-colors ${sectionStyles[section.key].header} ${sectionStyles[section.key].border}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       {section.done
                         ? <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                         : <Circle className="h-4 w-4 text-muted-foreground shrink-0" />}
-                      {sectionIcons[section.key]}
-                      <span className="text-sm font-medium">{section.label}</span>
+                      <span className={sectionStyles[section.key].icon}>{sectionIcons[section.key]}</span>
+                      <span className="text-sm font-semibold">{section.label}</span>
                       {!isOpen && (() => {
                         const summary = getContentSummary(section.key);
                         return summary ? (
