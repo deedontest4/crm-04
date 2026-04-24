@@ -175,7 +175,7 @@ export function CampaignAudienceTable({ campaignId, isCampaignEnded, selectedReg
 
   const isSyncing = accountsFetching || contactsFetching;
 
-  const handleExport = (kind: "csv" | "pdf") => {
+  const handleExport = async (kind: "csv" | "pdf") => {
     const useFiltered = exportScope === "filtered";
     const data = buildReachabilityData({
       campaignAccounts,
@@ -188,12 +188,17 @@ export function CampaignAudienceTable({ campaignId, isCampaignEnded, selectedReg
       toast({ title: "Nothing to export", description: "No contacts match the current filters." });
       return;
     }
-    if (kind === "csv") {
-      exportReachabilityCSV({ campaignName, primaryChannel, data, filteredView: useFiltered });
-    } else {
-      exportReachabilityPDF({ campaignName, primaryChannel, data, filteredView: useFiltered });
+    try {
+      if (kind === "csv") {
+        exportReachabilityCSV({ campaignName, primaryChannel, data, filteredView: useFiltered });
+      } else {
+        await exportReachabilityPDF({ campaignName, primaryChannel, data, filteredView: useFiltered });
+      }
+      toast({ title: "Export ready", description: `${kind.toUpperCase()} downloaded.` });
+    } catch (err) {
+      console.error("[reachability-export] failed", err);
+      toast({ title: "Export failed", description: "Could not generate the report.", variant: "destructive" });
     }
-    toast({ title: "Export ready", description: `${kind.toUpperCase()} downloaded.` });
   };
 
   const getContactsForAccount = (accountId: string) =>

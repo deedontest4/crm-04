@@ -202,6 +202,7 @@ export function CampaignCommunications({ campaignId, isCampaignEnded, viewMode, 
 
   // Realtime sync: keep contact/account info fresh in dropdowns so reachability
   // (email / linkedin / phone) updates within seconds of an edit elsewhere.
+  // Scoped to this campaign's join tables to avoid invalidating on unrelated edits.
   useEffect(() => {
     const invalidate = () => {
       queryClient.invalidateQueries({ queryKey: ["campaign-contacts", campaignId] });
@@ -209,8 +210,6 @@ export function CampaignCommunications({ campaignId, isCampaignEnded, viewMode, 
     };
     const channel = supabase
       .channel(`campaign-comms-sync-${campaignId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "contacts" }, invalidate)
-      .on("postgres_changes", { event: "*", schema: "public", table: "accounts" }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "campaign_contacts", filter: `campaign_id=eq.${campaignId}` }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "campaign_accounts", filter: `campaign_id=eq.${campaignId}` }, invalidate)
       .subscribe();
