@@ -1,6 +1,4 @@
 import { CSVParser } from "@/utils/csvParser";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { isReachableEmail, isReachableLinkedIn, isReachablePhone, whyUnreachable } from "@/lib/email";
 
