@@ -220,9 +220,9 @@ Deno.serve(async (req) => {
     });
 
     const pdfBytes = await pdfDoc.save();
-    // Return raw bytes — Response accepts Uint8Array as BodyInit and avoids
-    // a Deno type error caused by Blob([Uint8Array<ArrayBufferLike>]).
-    return new Response(pdfBytes, {
+    // Wrap in Blob to satisfy Deno BodyInit typing across runtime versions.
+    const body = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
+    return new Response(body, {
       status: 200,
       headers: {
         ...corsHeaders,
