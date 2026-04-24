@@ -231,12 +231,16 @@ export function exportReachabilityCSV(opts: {
   );
 }
 
-export function exportReachabilityPDF(opts: {
+export async function exportReachabilityPDF(opts: {
   campaignName: string;
   primaryChannel: string;
   data: ReturnType<typeof buildReachabilityData>;
   filteredView?: boolean;
 }) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ]);
   const { campaignName, primaryChannel, data, filteredView } = opts;
   const { rows, aggregates } = data;
 
