@@ -590,6 +590,10 @@ Deno.serve(async (req) => {
 
     const htmlBody = `${baseHtmlBody}${signatureHtml}${quotedHtml}${trackingPixel}`;
 
+    // Track every mailbox we attempted so the user-facing error can show
+    // exactly what was tried (instead of just the last attempt).
+    const attemptedMailboxes: string[] = [senderEmail];
+
     let result = await sendEmailViaGraph(
       accessToken,
       mailboxEmail,
@@ -609,13 +613,18 @@ Deno.serve(async (req) => {
     // Fall back to the configured shared mailbox whenever Graph denies the
     // per-user send (common when the app registration lacks Mail.Send for
     // that specific user mailbox but does have access to the shared mailbox).
+    // Set AZURE_DISABLE_SHARED_FALLBACK=true to skip this fallback when the
+    // shared mailbox isn't licensed to send — avoids a misleading second 403.
+    const sharedFallbackDisabled = (Deno.env.get("AZURE_DISABLE_SHARED_FALLBACK") || "").toLowerCase() === "true";
     if (
       !result.success &&
       result.errorCode === "ErrorAccessDenied" &&
       mailboxEmail &&
-      senderEmail.toLowerCase() !== mailboxEmail.toLowerCase()
+      senderEmail.toLowerCase() !== mailboxEmail.toLowerCase() &&
+      !sharedFallbackDisabled
     ) {
       console.warn(`User mailbox send denied for ${senderEmail}; retrying via shared mailbox ${mailboxEmail}`);
+      attemptedMailboxes.push(mailboxEmail);
       result = await sendEmailViaGraph(
         accessToken,
         mailboxEmail,
@@ -645,8 +654,10 @@ Deno.serve(async (req) => {
     // the recipient actually received the message from `mailboxEmail`, not `senderEmail`.
     // Surface the true sender so the UI toast / result panel can show "Sent as <shared>".
     const actualSender = attemptedSharedMailbox ? mailboxEmail : senderEmail;
+    // Build a clear admin-friendly error that names every mailbox we tried,
+    // so it's obvious the issue is Graph permissions (not wrong sender choice).
     const userFacingError = !result.success && result.errorCode === "ErrorAccessDenied"
-      ? `Microsoft 365 denied mailbox send access for ${actualSender}. Ask your admin to grant Mail.Send application permission and mailbox access for this sender.`
+      ? `Microsoft 365 denied mailbox send access. Tried: ${attemptedMailboxes.join(", ")}. Ask your admin to grant the Azure app the "Mail.Send" Application permission (with admin consent) and an Application Access Policy covering the sender mailbox.`
       : result.error;
 
     const { data: commRecord, error: commError } = await supabaseClient
