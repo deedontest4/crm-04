@@ -1,41 +1,73 @@
-## Reply to Email — UI Cleanup Plan
+## Fix: Send campaign email from logged-in user (not the shared mailbox)
 
-Scope: only the **Reply mode** of `EmailComposeModal.tsx`. Compose (Single/Bulk) flows stay unchanged so existing campaign sending UX is preserved.
+### Root Cause
 
-### Changes
+In `supabase/functions/send-campaign-email/index.ts` (line 593), the primary call to `sendEmailViaGraph` is:
 
-1. **Hide sender email chip in header (reply mode)**
-   - File: `src/components/campaigns/EmailComposeModal.tsx` (lines 1056–1068)
-   - Wrap the `senderEmail` chip in `{!isReplyMode && senderEmail && (...)}` so `deepak.dongare@…` no longer shows on the reply dialog. The Preview button stays.
-   - Sender info is still implicit (it's a reply from the logged-in user) and remains accessible in the full Compose modal.
+```ts
+sendEmailViaGraph(
+  accessToken,
+  mailboxEmail,   // ← shared mailbox (AZURE_SENDER_EMAIL = crm@realthingks.com)
+  ...
+  senderEmail,    // ← logged-in user as From override (deepak.dongare@…)
+  ...
+)
+```
 
-2. **Shrink Recipient field & put it on the same row as Template**
-   - File: lines 1086–1101 (reply branch) + 1257–1332 (subject/template row).
-   - Restructure the reply layout into a 2-row grid:
-     - Row 1: `Recipient` (read-only chip, `max-w-[260px]`) + `Template` selector beside it (`grid-cols-[minmax(0,260px)_1fr]`).
-     - Row 2: `Subject` full-width.
-   - For non-reply mode, keep the existing layout (Recipient full row, Subject + Template paired) untouched.
+`sendEmailViaGraph` posts to `https://graph.microsoft.com/v1.0/users/{senderMailbox}/sendMail` where `senderMailbox = fromEmail || senderEmail`. So today the request always targets the **shared mailbox** (`crm@realthingks.com`) using the user as a "From" override. That requires `Mail.Send` on the shared mailbox AND Send-As permissions for the user. When Microsoft 365 denies it, the error you see is exactly:
 
-3. **Hide the `{…} vars` pill in reply mode**
-   - File: lines 1263–1290.
-   - Wrap the variable-insert `Popover` in `{!isReplyMode && (...)}`. Variables are a power-user feature for templated campaign sends; replies are typically free-form prose, so the pill clutters the reply UI. Insertion still works in compose mode.
+> Microsoft 365 denied mailbox send access for crm@realthingks.com.
 
-4. **Hide "Use Preview to see merged output" hint in reply mode**
-   - File: lines 1344–1346.
-   - Wrap the helper `<span>` in `{!isReplyMode && (...)}`. The Preview button in the header already provides the action; the hint is redundant for replies.
+The fallback block also targets `mailboxEmail` — so both attempts hit the shared mailbox. The user's own mailbox (`deepak.dongare@…`) is never tried.
 
-### Additional small fixes & polish (reply mode)
+### Fix
 
-5. **Reply dialog default size** — Current `sm:max-w-[560px] lg:max-w-[600px]` is fine; verify it still feels balanced after the row compaction. No change unless content overflows.
+Make the **primary** send use the logged-in user's own mailbox (no `fromEmail` override). Keep the existing shared-mailbox path strictly as a **fallback** for when the user mailbox is denied. Net effect:
 
-6. **Recipient chip readability** — Render the recipient as `Name <email>` with name bolded and email muted, inside a single-line truncating chip (currently it wraps awkwardly when names are long).
+- Recipient sees `From: deepak.dongare@realthingks.com` (the logged-in user) by default.
+- Only if the app registration lacks `Mail.Send` on the user mailbox does it fall back to the shared mailbox.
 
-7. **Subject auto-focus on open in reply mode** — Replies almost always start with the cursor in the body, but if Subject is blank (rare), focus Subject; otherwise focus the body editor. Small ergonomic win, no logic change required beyond an effect on `open && isReplyMode`.
+### Edit
+
+**File:** `supabase/functions/send-campaign-email/index.ts` — lines 593–606 (the first `sendEmailViaGraph` call).
+
+Change argument 2 from `mailboxEmail` → `senderEmail`, and argument 7 from `senderEmail` → `undefined`. The fallback block (612–634) stays unchanged — it still retries via `mailboxEmail` if the user mailbox is denied.
+
+```ts
+// BEFORE
+let result = await sendEmailViaGraph(
+  accessToken,
+  mailboxEmail,             // shared mailbox
+  ...,
+  senderEmail,              // From override
+  ...
+);
+
+// AFTER
+let result = await sendEmailViaGraph(
+  accessToken,
+  senderEmail,              // user's own mailbox
+  ...,
+  undefined,                // no override — From = mailbox owner
+  ...
+);
+```
+
+### Verification
+
+After redeploy:
+1. Logged in as `deepak.dongare@realthingks.com`, send a campaign reply.
+2. Recipient's inbox shows From: `deepak.dongare@realthingks.com`.
+3. Server log line `Sending campaign email from user mailbox: …` is followed by a Graph 202 (success) instead of 403/ErrorAccessDenied.
+4. If `Mail.Send` is not granted on the user mailbox, the existing fallback retries via `crm@realthingks.com` and the toast shows "Sent as <shared mailbox>".
+
+### Required Microsoft 365 Admin Action (informational, not code)
+
+For the fix to actually deliver from the user's mailbox, the Azure app registration needs `Mail.Send` application permission scoped to allow sending as the individual user mailboxes. If that's not granted, the fallback still works via the shared mailbox — same behavior as today, just with the user mailbox tried first.
 
 ### Out of Scope
-- No changes to Compose (Single/Bulk) layout.
-- No changes to send logic, template substitution, attachments, or preview modal.
-- No backend/database changes.
 
-### Expected Result
-The Reply modal matches the cleaner Outlook-style layout: compact header (no email chip), Recipient + Template side-by-side at a sensible width, Subject on its own line without the vars pill, and the body editor without the redundant Preview hint.
+- No UI changes.
+- No DB or schema changes.
+- No changes to `azure-email.ts` (the helper already supports both modes).
+- No changes to follow-up runner (`campaign-follow-up-runner`) — it intentionally uses the shared mailbox for unattended automation; only manual sends route via the user.
