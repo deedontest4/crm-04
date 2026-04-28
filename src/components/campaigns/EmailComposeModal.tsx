@@ -1053,7 +1053,7 @@ export function EmailComposeModal({ open, onOpenChange, campaignId, contacts: co
                 </ToggleGroup>
               )}
               <div className="ml-auto flex items-center gap-2 min-w-0">
-                {senderEmail && (
+                {!isReplyMode && senderEmail && (
                   <TooltipProvider delayDuration={150}>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1083,23 +1083,58 @@ export function EmailComposeModal({ open, onOpenChange, campaignId, contacts: co
           <div className="grid gap-2 py-0">
             {/* Send mode now lives in the dialog header (above) */}
 
-            {/* Recipients (full-width row) */}
+            {/* Recipients (full-width row) — Reply mode pairs Recipient with Template */}
+            {isReplyMode ? (
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,260px)_1fr] gap-2 items-end">
+                <div className="space-y-1 min-w-0">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Users className="h-3 w-3" />
+                    Recipient *
+                  </Label>
+                  <div className="border rounded-md px-2.5 h-8 flex items-center text-sm bg-muted/30 truncate">
+                    <span className="font-medium truncate">
+                      {previewContact?.contacts?.contact_name || "Recipient"}
+                    </span>
+                    {previewContact?.contacts?.email && (
+                      <span className="text-xs text-muted-foreground ml-1.5 truncate">
+                        &lt;{previewContact.contacts.email}&gt;
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1 min-w-0">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <FileText className="h-3 w-3" />
+                    Template
+                  </Label>
+                  <Select value={templateId} onValueChange={handleTemplateSelect}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Optional…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3 w-3" />
+                            <span className="truncate">{t.template_name}</span>
+                            {t.email_type && <Badge variant="secondary" className="text-[10px] px-1 py-0">{t.email_type}</Badge>}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-1">
-              {(isReplyMode || mode === "single") && (
+              {mode === "single" && (
                 <Label className="text-xs flex items-center gap-1.5">
                   <Users className="h-3 w-3" />
                   Recipient *
                 </Label>
               )}
 
-              {isReplyMode ? (
-                <div className="border rounded-md px-2.5 py-1 text-sm bg-muted/30">
-                  {previewContact?.contacts?.contact_name || "Recipient"}{" "}
-                  <span className="text-xs text-muted-foreground">
-                    {previewContact?.contacts?.email}
-                  </span>
-                </div>
-              ) : mode === "single" ? (
+              {mode === "single" ? (
                 <Select value={singleContactId} onValueChange={setSingleContactId}>
                   <SelectTrigger className="h-8 text-sm w-full max-w-[340px]">
                     <SelectValue placeholder="Select a contact..." />
@@ -1253,41 +1288,44 @@ export function EmailComposeModal({ open, onOpenChange, campaignId, contacts: co
                 </div>
               )}
             </div>
+            )}
 
-            {/* Subject + Template (paired row) */}
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-2 items-end">
+            {/* Subject + Template — Reply mode shows Subject full-width (Template is paired with Recipient above) */}
+            <div className={isReplyMode ? "" : "grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-2 items-end"}>
               <div className="space-y-0.5 min-w-0">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <Label className="text-xs flex items-center gap-1.5">
                     Subject *
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 rounded border px-1.5 py-0 h-5 text-[10px] text-muted-foreground hover:bg-muted"
-                          title="Insert variable"
-                        >
-                          {"{…}"} vars
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent align="start" className="w-auto max-w-[340px] p-2">
-                        <div className="text-[10px] text-muted-foreground mb-1.5">
-                          Insert into <span className="font-semibold">{focusedField}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {AVAILABLE_VARIABLES.map(v => (
-                            <Badge
-                              key={v}
-                              variant="outline"
-                              className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-muted"
-                              onMouseDown={(e) => { e.preventDefault(); insertVariable(v); }}
-                            >
-                              {v}
-                            </Badge>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    {!isReplyMode && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded border px-1.5 py-0 h-5 text-[10px] text-muted-foreground hover:bg-muted"
+                            title="Insert variable"
+                          >
+                            {"{…}"} vars
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-auto max-w-[340px] p-2">
+                          <div className="text-[10px] text-muted-foreground mb-1.5">
+                            Insert into <span className="font-semibold">{focusedField}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {AVAILABLE_VARIABLES.map(v => (
+                              <Badge
+                                key={v}
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-muted"
+                                onMouseDown={(e) => { e.preventDefault(); insertVariable(v); }}
+                              >
+                                {v}
+                              </Badge>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   </Label>
                   {(subjectWarn || subjectTooLong) && (
                     <span
@@ -1307,28 +1345,30 @@ export function EmailComposeModal({ open, onOpenChange, campaignId, contacts: co
                   className="h-8 text-sm"
                 />
               </div>
-              <div className="space-y-0.5 min-w-0">
-                <Label className="text-xs flex items-center gap-1.5">
-                  <FileText className="h-3 w-3" />
-                  Template
-                </Label>
-                <Select value={templateId} onValueChange={handleTemplateSelect}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Optional…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map(t => (
-                      <SelectItem key={t.id} value={t.id}>
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-3 w-3" />
-                          <span className="truncate">{t.template_name}</span>
-                          {t.email_type && <Badge variant="secondary" className="text-[10px] px-1 py-0">{t.email_type}</Badge>}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!isReplyMode && (
+                <div className="space-y-0.5 min-w-0">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <FileText className="h-3 w-3" />
+                    Template
+                  </Label>
+                  <Select value={templateId} onValueChange={handleTemplateSelect}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Optional…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3 w-3" />
+                            <span className="truncate">{t.template_name}</span>
+                            {t.email_type && <Badge variant="secondary" className="text-[10px] px-1 py-0">{t.email_type}</Badge>}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* Body editor — full width (preview lives in a dedicated modal) */}
@@ -1341,9 +1381,11 @@ export function EmailComposeModal({ open, onOpenChange, campaignId, contacts: co
                     Placeholder text
                   </Badge>
                 )}
-                <span className="ml-auto text-[10px] text-muted-foreground">
-                  Use <button type="button" className="underline hover:text-foreground" onClick={() => setPreviewOpen(true)}>Preview</button> to see merged output.
-                </span>
+                {!isReplyMode && (
+                  <span className="ml-auto text-[10px] text-muted-foreground">
+                    Use <button type="button" className="underline hover:text-foreground" onClick={() => setPreviewOpen(true)}>Preview</button> to see merged output.
+                  </span>
+                )}
               </Label>
               <div onFocus={() => setFocusedField("body")}>
                 <RichEmailBodyEditor value={body} onChange={setBody} minHeightPx={220} />
