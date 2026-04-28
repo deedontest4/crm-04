@@ -1381,9 +1381,11 @@ export function EmailComposeModal({ open, onOpenChange, campaignId, contacts: co
                     Placeholder text
                   </Badge>
                 )}
-                <span className="ml-auto text-[10px] text-muted-foreground">
-                  Use <button type="button" className="underline hover:text-foreground" onClick={() => setPreviewOpen(true)}>Preview</button> to see merged output.
-                </span>
+                {!isReplyMode && (
+                  <span className="ml-auto text-[10px] text-muted-foreground">
+                    Use <button type="button" className="underline hover:text-foreground" onClick={() => setPreviewOpen(true)}>Preview</button> to see merged output.
+                  </span>
+                )}
               </Label>
               <div onFocus={() => setFocusedField("body")}>
                 <RichEmailBodyEditor value={body} onChange={setBody} minHeightPx={220} />
