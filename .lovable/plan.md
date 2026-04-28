@@ -1,73 +1,59 @@
-## Fix: Send campaign email from logged-in user (not the shared mailbox)
+## Diagnosis: This is a Microsoft 365 permission problem, not wrong sender routing
 
-### Root Cause
+### What the code is actually doing (verified from logs)
 
-In `supabase/functions/send-campaign-email/index.ts` (line 593), the primary call to `sendEmailViaGraph` is:
-
-```ts
-sendEmailViaGraph(
-  accessToken,
-  mailboxEmail,   // ← shared mailbox (AZURE_SENDER_EMAIL = crm@realthingks.com)
-  ...
-  senderEmail,    // ← logged-in user as From override (deepak.dongare@…)
-  ...
-)
+The send-campaign-email log line confirms the routing:
+```
+Sending campaign email from user mailbox: deepak.dongare@realthingks.com (shared mailbox: crm@realthingks.com)
+User mailbox send denied for deepak.dongare@realthingks.com; retrying via shared mailbox crm@realthingks.com
 ```
 
-`sendEmailViaGraph` posts to `https://graph.microsoft.com/v1.0/users/{senderMailbox}/sendMail` where `senderMailbox = fromEmail || senderEmail`. So today the request always targets the **shared mailbox** (`crm@realthingks.com`) using the user as a "From" override. That requires `Mail.Send` on the shared mailbox AND Send-As permissions for the user. When Microsoft 365 denies it, the error you see is exactly:
+So:
+1. The function **first tries the logged-in user's mailbox** (`deepak.dongare@realthingks.com`) — exactly what you want. Microsoft Graph rejects it with `ErrorAccessDenied`.
+2. It then **falls back to the shared mailbox** (`crm@realthingks.com`). Microsoft Graph rejects that too with `ErrorAccessDenied`.
+3. The user-facing error message only shows the *last* attempted sender (`crm@realthingks.com`), which makes it look like the wrong mailbox was used. That's a UX bug in the message, not a routing bug.
 
-> Microsoft 365 denied mailbox send access for crm@realthingks.com.
+### Real root cause
 
-The fallback block also targets `mailboxEmail` — so both attempts hit the shared mailbox. The user's own mailbox (`deepak.dongare@…`) is never tried.
+The Azure AD app registration backing this integration does **not** have `Mail.Send` Application permission granted for either mailbox. Without that:
+- Per-user sends from `deepak.dongare@…` get 403.
+- Shared-mailbox sends from `crm@…` get 403 too.
 
-### Fix
+This must be fixed by the Microsoft 365 admin in Entra/Azure portal — no code change can grant permission.
 
-Make the **primary** send use the logged-in user's own mailbox (no `fromEmail` override). Keep the existing shared-mailbox path strictly as a **fallback** for when the user mailbox is denied. Net effect:
+### Fixes (code)
 
-- Recipient sees `From: deepak.dongare@realthingks.com` (the logged-in user) by default.
-- Only if the app registration lacks `Mail.Send` on the user mailbox does it fall back to the shared mailbox.
+1. **Make the error message accurate** — in `supabase/functions/send-campaign-email/index.ts` lines 647–650, build the message from BOTH attempts so the user can see what was tried. Example:
+   > Microsoft 365 denied mailbox send access. Tried user mailbox `deepak.dongare@realthingks.com` and shared mailbox `crm@realthingks.com`. Ask your admin to grant the Azure app `Mail.Send` Application permission (with admin consent) for the sender mailbox.
 
-### Edit
+   Track both attempts with a small `attemptedMailboxes: string[]` array populated where each `sendEmailViaGraph` call is made.
 
-**File:** `supabase/functions/send-campaign-email/index.ts` — lines 593–606 (the first `sendEmailViaGraph` call).
+2. **Surface a clear admin checklist in the toast** — when `errorCode === "ErrorAccessDenied"`, append a link/hint pointing to the Azure portal area (Entra → App registrations → API permissions). Keep the message short; the audit log already stores the raw Graph response.
 
-Change argument 2 from `mailboxEmail` → `senderEmail`, and argument 7 from `senderEmail` → `undefined`. The fallback block (612–634) stays unchanged — it still retries via `mailboxEmail` if the user mailbox is denied.
+3. **Add an explicit opt-out for the shared-mailbox fallback** (optional config). New env: `AZURE_DISABLE_SHARED_FALLBACK=true`. When set, the fallback block at lines 612–634 is skipped and the user mailbox failure is reported directly. Useful when the shared mailbox isn't licensed for sending — avoids a misleading second 403 in the log.
 
-```ts
-// BEFORE
-let result = await sendEmailViaGraph(
-  accessToken,
-  mailboxEmail,             // shared mailbox
-  ...,
-  senderEmail,              // From override
-  ...
-);
+### Fixes (admin/Microsoft 365 — informational, not code)
 
-// AFTER
-let result = await sendEmailViaGraph(
-  accessToken,
-  senderEmail,              // user's own mailbox
-  ...,
-  undefined,                // no override — From = mailbox owner
-  ...
-);
-```
+In Entra admin center → App registrations → (the app whose `AZURE_EMAIL_CLIENT_ID` is in Supabase secrets):
+- API permissions → add **Microsoft Graph → Application permissions → `Mail.Send`** → Grant admin consent.
+- Then restrict the app to specific mailboxes via an **Application Access Policy** (PowerShell `New-ApplicationAccessPolicy`) so the app can ONLY send as `deepak.dongare@realthingks.com`, `crm@realthingks.com`, and any other approved senders. This is the secure pattern Microsoft documents for client-credentials Mail.Send.
+- Confirm both mailboxes have valid Exchange Online licenses.
+
+After admin consent + access policy, re-test from the Reply modal.
 
 ### Verification
 
-After redeploy:
-1. Logged in as `deepak.dongare@realthingks.com`, send a campaign reply.
-2. Recipient's inbox shows From: `deepak.dongare@realthingks.com`.
-3. Server log line `Sending campaign email from user mailbox: …` is followed by a Graph 202 (success) instead of 403/ErrorAccessDenied.
-4. If `Mail.Send` is not granted on the user mailbox, the existing fallback retries via `crm@realthingks.com` and the toast shows "Sent as <shared mailbox>".
-
-### Required Microsoft 365 Admin Action (informational, not code)
-
-For the fix to actually deliver from the user's mailbox, the Azure app registration needs `Mail.Send` application permission scoped to allow sending as the individual user mailboxes. If that's not granted, the fallback still works via the shared mailbox — same behavior as today, just with the user mailbox tried first.
+- After grant: send a reply → Graph returns 202 → `email_send_log.delivery_status = 'sent'`, `sender_email = deepak.dongare@realthingks.com`.
+- Without grant: the new error message clearly names BOTH mailboxes and the required `Mail.Send` permission, removing the confusion that prompted this report.
 
 ### Out of Scope
 
-- No UI changes.
-- No DB or schema changes.
-- No changes to `azure-email.ts` (the helper already supports both modes).
-- No changes to follow-up runner (`campaign-follow-up-runner`) — it intentionally uses the shared mailbox for unattended automation; only manual sends route via the user.
+- No DB schema changes.
+- No UI redesign — only the toast/error string changes.
+- No change to `azure-email.ts` (works correctly today).
+- Follow-up runner (`campaign-follow-up-runner`) still uses the shared mailbox by design for unattended automation — out of scope for this fix.
+
+### Files to edit
+
+- `supabase/functions/send-campaign-email/index.ts` — track `attemptedMailboxes`, rebuild `userFacingError` (lines 593–650), optional env-gated fallback.
+- (Optional) `src/components/campaigns/EmailComposeModal.tsx` — when `errorCode === "ErrorAccessDenied"`, render the multi-line admin hint inside the existing `Send results` panel instead of as a single line.
