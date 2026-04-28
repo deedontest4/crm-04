@@ -1053,7 +1053,7 @@ export function EmailComposeModal({ open, onOpenChange, campaignId, contacts: co
                 </ToggleGroup>
               )}
               <div className="ml-auto flex items-center gap-2 min-w-0">
-                {senderEmail && (
+                {!isReplyMode && senderEmail && (
                   <TooltipProvider delayDuration={150}>
                     <Tooltip>
                       <TooltipTrigger asChild>
