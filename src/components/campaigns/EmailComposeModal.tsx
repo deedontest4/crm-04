@@ -1290,40 +1290,42 @@ export function EmailComposeModal({ open, onOpenChange, campaignId, contacts: co
             </div>
             )}
 
-            {/* Subject + Template (paired row) */}
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-2 items-end">
+            {/* Subject + Template — Reply mode shows Subject full-width (Template is paired with Recipient above) */}
+            <div className={isReplyMode ? "" : "grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-2 items-end"}>
               <div className="space-y-0.5 min-w-0">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <Label className="text-xs flex items-center gap-1.5">
                     Subject *
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 rounded border px-1.5 py-0 h-5 text-[10px] text-muted-foreground hover:bg-muted"
-                          title="Insert variable"
-                        >
-                          {"{…}"} vars
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent align="start" className="w-auto max-w-[340px] p-2">
-                        <div className="text-[10px] text-muted-foreground mb-1.5">
-                          Insert into <span className="font-semibold">{focusedField}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {AVAILABLE_VARIABLES.map(v => (
-                            <Badge
-                              key={v}
-                              variant="outline"
-                              className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-muted"
-                              onMouseDown={(e) => { e.preventDefault(); insertVariable(v); }}
-                            >
-                              {v}
-                            </Badge>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    {!isReplyMode && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded border px-1.5 py-0 h-5 text-[10px] text-muted-foreground hover:bg-muted"
+                            title="Insert variable"
+                          >
+                            {"{…}"} vars
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-auto max-w-[340px] p-2">
+                          <div className="text-[10px] text-muted-foreground mb-1.5">
+                            Insert into <span className="font-semibold">{focusedField}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {AVAILABLE_VARIABLES.map(v => (
+                              <Badge
+                                key={v}
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 cursor-pointer hover:bg-muted"
+                                onMouseDown={(e) => { e.preventDefault(); insertVariable(v); }}
+                              >
+                                {v}
+                              </Badge>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   </Label>
                   {(subjectWarn || subjectTooLong) && (
                     <span
@@ -1343,28 +1345,30 @@ export function EmailComposeModal({ open, onOpenChange, campaignId, contacts: co
                   className="h-8 text-sm"
                 />
               </div>
-              <div className="space-y-0.5 min-w-0">
-                <Label className="text-xs flex items-center gap-1.5">
-                  <FileText className="h-3 w-3" />
-                  Template
-                </Label>
-                <Select value={templateId} onValueChange={handleTemplateSelect}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Optional…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map(t => (
-                      <SelectItem key={t.id} value={t.id}>
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-3 w-3" />
-                          <span className="truncate">{t.template_name}</span>
-                          {t.email_type && <Badge variant="secondary" className="text-[10px] px-1 py-0">{t.email_type}</Badge>}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!isReplyMode && (
+                <div className="space-y-0.5 min-w-0">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <FileText className="h-3 w-3" />
+                    Template
+                  </Label>
+                  <Select value={templateId} onValueChange={handleTemplateSelect}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Optional…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3 w-3" />
+                            <span className="truncate">{t.template_name}</span>
+                            {t.email_type && <Badge variant="secondary" className="text-[10px] px-1 py-0">{t.email_type}</Badge>}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* Body editor — full width (preview lives in a dedicated modal) */}
